@@ -6,14 +6,17 @@ A command line tool for placing conditional stop-limit, limit, and OCO (One-Canc
 
 Prerequisites: [Node.js](https://nodejs.org/en/)
 
-Open a terminal/command prompt and run the following command:
+The easiest way to get started is to install `binance-oco` globally. Open a terminal/command prompt and run the command below.
+**Note:** You may need to use `sudo` (for macOS, *nix etc), or run your command shell as Administrator (for Windows) to do this.
 ```
-npm install binance-oco
+npm install -g binance-oco
 ```
+
+This will add the `binance-oco` command to your system path, allowing it to be run from any folder.
 
 ## Configuration
 
-Create a file called `.env` in the folder from where you'll be running `binance-oco`, and add your [Binance API key](https://support.binance.com/hc/en-us/articles/360002502072-How-to-create-API) in the following format:
+Create a file called `.env` in the folder from where you want to run `binance-oco`, and add your [Binance API key](https://support.binance.com/hc/en-us/articles/360002502072-How-to-create-API) in the following format:
 ```
 APIKEY={Binance API Key}
 APISECRET={Binance Secret Key}
