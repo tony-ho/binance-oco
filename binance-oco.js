@@ -1,12 +1,13 @@
+#!/usr/bin/env node
 /* eslint-disable no-console */
 /* eslint func-names: ["warn", "as-needed"] */
 
 require('dotenv').config();
 
 const { argv } = require('yargs')
-  .usage('Usage: node $0')
+  .usage('Usage: $0')
   .example(
-    'node $0 -p BNBBTC -a 1 -b 0.002 -s 0.001 -t 0.003',
+    '$0 -p BNBBTC -a 1 -b 0.002 -s 0.001 -t 0.003',
     'Place a buy order for 1 BNB @ 0.002 BTC. Once filled, place a stop-limit sell @ 0.001 BTC. If a price of 0.003 BTC is reached, cancel stop-limit order and place a limit sell @ 0.003 BTC.',
   )
   // '-p <tradingPair>'

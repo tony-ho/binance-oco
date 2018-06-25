@@ -24,43 +24,43 @@ APISECRET={Binance Secret Key}
 ## Usage
 
 ```
-node binance-oco
+binance-oco
 ```
 
 ### Market and limit buy orders
 
 Place a market buy order for 1 BNB:
 ```
-node binance-oco -p BNBBTC -a 1 -b 0
+binance-oco -p BNBBTC -a 1 -b 0
 ```
 
 Place a limit buy order for 1 BNB @ 0.002 BTC:
 ```
-node binance-oco -p BNBBTC -a 1 -b 0.002
+binance-oco -p BNBBTC -a 1 -b 0.002
 ```
 
 ### Stop-limit and limit sell orders
 
 Place a stop-limit sell for 1 BNB @ 0.001 BTC:
 ```
-node binance-oco -p BNBBTC -a 1 -s 0.001
+binance-oco -p BNBBTC -a 1 -s 0.001
 ```
 
 Place a limit sell for 1 BNB @ 0.003 BTC:
 ```
-node binance-oco -p BNBBTC -a 1 -t 0.003
+binance-oco -p BNBBTC -a 1 -t 0.003
 ```
 
 ### Conditional sell orders
 
 Place a buy order for 1 BNB @ 0.002 BTC. Once filled, place a stop-limit sell @ 0.001 BTC:
 ```
-node binance-oco -p BNBBTC -a 1 -b 0.002 -s 0.001
+binance-oco -p BNBBTC -a 1 -b 0.002 -s 0.001
 ```
 
 ### One-Cancels-the-Other (OCO) sell orders
 
 Place a buy order for 1 BNB @ 0.002 BTC. Once filled, place a stop-limit sell @ 0.001 BTC. If a price of 0.003 BTC is reached, cancel stop-limit order and place a limit sell @ 0.003 BTC:
 ```
-node binance-oco -p BNBBTC -a 1 -b 0.002 -s 0.001 -t 0.003
+binance-oco -p BNBBTC -a 1 -b 0.002 -s 0.001 -t 0.003
 ```
