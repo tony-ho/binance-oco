@@ -28,14 +28,18 @@ const { argv } = require('yargs')
   // '-s <stopPrice>'
   .number('s')
   .alias('s', 'stop')
-  .describe('s', 'Set stop-limit order sell price')
+  .describe('s', 'Set stop-limit order stop price')
+  // '-l <limitPrice>'
+  .number('l')
+  .alias('l', 'limit')
+  .describe('l', 'Set stop-limit order limit sell price (if different from stop price).')
   // '-t <targetPrice>'
   .number('t')
   .alias('t', 'target')
   .describe('t', 'Set target limit order sell price');
 
 const {
-  p: pair, a: amount, b: buyPrice, s: stopPrice, t: targetPrice,
+  p: pair, a: amount, b: buyPrice, s: stopPrice, l: limitPrice, t: targetPrice,
 } = argv;
 
 const Binance = require('node-binance-api');
@@ -74,7 +78,11 @@ const binance = new Binance().options({
 
   const placeSellOrder = function () {
     if (stopPrice) {
-      binance.sell(pair, sellAmount, stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT' }, sellComplete);
+      if (limitPrice) {
+        binance.sell(pair, sellAmount, limitPrice, { stopPrice, type: 'STOP_LOSS_LIMIT' }, sellComplete);
+      } else {
+        binance.sell(pair, sellAmount, stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT' }, sellComplete);
+      }
     } else if (targetPrice) {
       binance.sell(pair, sellAmount, targetPrice, { type: 'LIMIT' }, sellComplete);
     }
