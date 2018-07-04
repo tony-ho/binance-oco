@@ -47,6 +47,11 @@ Place a stop-limit sell for 1 BNB @ 0.001 BTC:
 binance-oco -p BNBBTC -a 1 -s 0.001
 ```
 
+Place a stop-limit sell for 1 BNB with stop price @ 0.002 BTC, and limit price @ 0.001 BTC. See [How to use Stop-Limit Function](https://support.binance.com/hc/en-us/articles/115003372072-How-to-use-Stop-Limit-Function).
+```
+binance-oco -p BNBBTC -a 1 -s 0.002 -l 0.001
+```
+
 Place a limit sell for 1 BNB @ 0.003 BTC:
 ```
 binance-oco -p BNBBTC -a 1 -t 0.003
