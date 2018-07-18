@@ -109,6 +109,8 @@ const binance = new Binance().options({
       placeStopOrder();
     } else if (targetPrice) {
       placeTargetOrder();
+    } else {
+      process.exit();
     }
   };
 
