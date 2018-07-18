@@ -16,11 +16,11 @@ This will add the `binance-oco` command to your system path, allowing it to be r
 
 ## Configuration
 
-Create a file called `.env` in the folder from where you want to run `binance-oco`, and add your [Binance API key](https://support.binance.com/hc/en-us/articles/360002502072-How-to-create-API) in the following format:
-```
-APIKEY={Binance API Key}
-APISECRET={Binance Secret Key}
-```
+Create a file called `.env` in the folder from where you want to run `binance-oco`, and add your [Binance API key](https://support.binance.com/hc/en-us/articles/360002502072-How-to-create-API) in the following format. Replace `BINANCE_API_KEY` with your API key and `BINANCE_API_SECRET` with your API secret.
+<pre>
+APIKEY=<b>BINANCE_API_KEY</b>
+APISECRET=<b>BINANCE_API_SECRET</b>
+</pre>
 
 ## Usage
 
