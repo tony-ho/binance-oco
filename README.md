@@ -1,6 +1,6 @@
 # Binance Auto Stop & Target OCO (One-Cancels-the-Other)
 
-A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on [Binance](https://www.binance.com/?ref=17067303).
+A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on [Binance](https://www.binance.com/?ref=17067303) cryptocurrency exchange.
 
 ## Installation
 
