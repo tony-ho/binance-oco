@@ -93,11 +93,11 @@ const binance = new Binance().options({
   };
 
   const placeStopOrder = function () {
-    binance.sell(pair, stopSellAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT' }, sellComplete);
+    binance.sell(pair, stopSellAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, sellComplete);
   };
 
   const placeTargetOrder = function () {
-    binance.sell(pair, targetSellAmount, targetPrice, { type: 'LIMIT' }, sellComplete);
+    binance.sell(pair, targetSellAmount, targetPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, sellComplete);
     if (stopPrice && targetSellAmount !== stopSellAmount) {
       stopSellAmount -= targetSellAmount;
       placeStopOrder();
