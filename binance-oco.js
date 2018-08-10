@@ -162,7 +162,7 @@ const binance = new Binance().options({
         binance.cancel(symbol, stopOrderId, (error, response) => {
           if (error) {
             console.log(`${symbol} cancel error:`, error.body);
-            process.exit(1);
+            return;
           }
 
           console.log(`${symbol} cancel response:`, response);
@@ -173,7 +173,7 @@ const binance = new Binance().options({
         binance.cancel(symbol, targetOrderId, (error, response) => {
           if (error) {
             console.log(`${symbol} cancel error:`, error.body);
-            process.exit(1);
+            return;
           }
 
           console.log(`${symbol} cancel response:`, response);
