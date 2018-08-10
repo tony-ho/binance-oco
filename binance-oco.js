@@ -150,6 +150,8 @@ const binance = new Binance().options({
     placeSellOrder();
   }
 
+  let isCancelling = false;
+
   binance.websockets.trades([pair], (trades) => {
     const { s: symbol, p: price } = trades;
 
@@ -158,26 +160,30 @@ const binance = new Binance().options({
     } else if (stopOrderId || targetOrderId) {
       console.log(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
 
-      if (stopOrderId && !targetOrderId && price >= targetPrice) {
+      if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
+        isCancelling = true;
         binance.cancel(symbol, stopOrderId, (error, response) => {
+          isCancelling = false;
           if (error) {
             console.error(`${symbol} cancel error:`, error.body);
             return;
           }
 
-          console.log(`${symbol} cancel response:`, response);
           stopOrderId = 0;
+          console.log(`${symbol} cancel response:`, response);
           placeTargetOrder();
         });
-      } else if (targetOrderId && !stopOrderId && price <= stopPrice) {
+      } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
+        isCancelling = true;
         binance.cancel(symbol, targetOrderId, (error, response) => {
+          isCancelling = false;
           if (error) {
             console.error(`${symbol} cancel error:`, error.body);
             return;
           }
 
-          console.log(`${symbol} cancel response:`, response);
           targetOrderId = 0;
+          console.log(`${symbol} cancel response:`, response);
           if (targetSellAmount !== stopSellAmount) {
             stopSellAmount += targetSellAmount;
           }
