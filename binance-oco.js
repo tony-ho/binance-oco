@@ -74,7 +74,7 @@ const binance = new Binance().options({
 
   const sellComplete = function (error, response) {
     if (error) {
-      console.log('Sell error', error.body);
+      console.error('Sell error', error.body);
       process.exit(1);
     }
 
@@ -118,7 +118,7 @@ const binance = new Binance().options({
 
   const buyComplete = function (error, response) {
     if (error) {
-      console.log('Buy error', error.body);
+      console.error('Buy error', error.body);
       process.exit(1);
     }
 
@@ -161,7 +161,7 @@ const binance = new Binance().options({
       if (stopOrderId && !targetOrderId && price >= targetPrice) {
         binance.cancel(symbol, stopOrderId, (error, response) => {
           if (error) {
-            console.log(`${symbol} cancel error:`, error.body);
+            console.error(`${symbol} cancel error:`, error.body);
             return;
           }
 
@@ -172,7 +172,7 @@ const binance = new Binance().options({
       } else if (targetOrderId && !stopOrderId && price <= stopPrice) {
         binance.cancel(symbol, targetOrderId, (error, response) => {
           if (error) {
-            console.log(`${symbol} cancel error:`, error.body);
+            console.error(`${symbol} cancel error:`, error.body);
             return;
           }
 
