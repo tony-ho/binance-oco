@@ -37,13 +37,18 @@ const { argv } = require('yargs')
   .number('t')
   .alias('t', 'target')
   .describe('t', 'Set target limit order sell price')
+  // '-c <cancelPrice>'
+  .number('c')
+  .alias('c', 'cancel')
+  .describe('c', 'Set price at which to cancel buy order')
   // '-S <scaleOutAmount>'
   .number('S')
   .alias('S', 'scaleOutAmount')
   .describe('S', 'Set amount to sell (scale out) at target price (if different from amount)');
 
 const {
-  p: pair, a: amount, b: buyPrice, s: stopPrice, l: limitPrice, t: targetPrice, S: scaleOutAmount,
+  p: pair, a: amount, b: buyPrice, s: stopPrice, l: limitPrice, t: targetPrice, c: cancelPrice,
+  S: scaleOutAmount,
 } = argv;
 
 const Binance = require('node-binance-api');
@@ -156,7 +161,27 @@ const binance = new Binance().options({
     const { s: symbol, p: price } = trades;
 
     if (buyOrderId) {
-      console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+      if (!cancelPrice) {
+        console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+      } else {
+        console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
+
+        if (((price < buyPrice && price <= cancelPrice)
+            || (price > buyPrice && price >= cancelPrice))
+            && !isCancelling) {
+          isCancelling = true;
+          binance.cancel(symbol, buyOrderId, (error, response) => {
+            isCancelling = false;
+            if (error) {
+              console.error(`${symbol} cancel error:`, error.body);
+              return;
+            }
+
+            console.log(`${symbol} cancel response:`, response);
+            process.exit(0);
+          });
+        }
+      }
     } else if (stopOrderId || targetOrderId) {
       console.log(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
 
