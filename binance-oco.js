@@ -80,17 +80,22 @@ const binance = new Binance().options({
 
     amount = binance.roundStep(amount, stepSize);
 
+    if (amount < minQty) {
+      console.error(`Amount ${amount} does not meet minimum order amount ${minQty}.`);
+      process.exit(1);
+    }
+
     if (scaleOutAmount) {
       scaleOutAmount = binance.roundStep(scaleOutAmount, stepSize);
+
+      if (scaleOutAmount < minQty) {
+        console.error(`Scale out amount ${scaleOutAmount} does not meet minimum order amount ${minQty}.`);
+        process.exit(1);
+      }
     }
 
     if (buyPrice) {
       buyPrice = binance.roundTicks(buyPrice, tickSize);
-
-      if (amount < minQty) {
-        console.error(`Amount ${amount} does not meet minimum order amount ${minQty}.`);
-        process.exit(1);
-      }
 
       if (buyPrice < minPrice) {
         console.error(`Buy price ${buyPrice} does not meet minimum order price ${minPrice}.`);
@@ -107,11 +112,6 @@ const binance = new Binance().options({
 
     if (stopPrice) {
       stopPrice = binance.roundTicks(stopPrice, tickSize);
-
-      if (stopSellAmount < minQty) {
-        console.error(`Amount ${stopSellAmount} does not meet minimum order amount ${minQty}.`);
-        process.exit(1);
-      }
 
       if (limitPrice) {
         limitPrice = binance.roundTicks(limitPrice, tickSize);
@@ -142,11 +142,6 @@ const binance = new Binance().options({
 
     if (targetPrice) {
       targetPrice = binance.roundTicks(targetPrice, tickSize);
-
-      if (targetSellAmount < minQty) {
-        console.error(`Amount ${targetSellAmount} does not meet minimum order amount ${minQty}.`);
-        process.exit(1);
-      }
 
       if (targetPrice < minPrice) {
         console.error(`Target price ${targetPrice} does not meet minimum order price ${minPrice}.`);
