@@ -25,6 +25,12 @@ const { argv } = require('yargs')
   .alias('b', 'e')
   .alias('b', 'entry')
   .describe('b', 'Set buy price (0 for market buy)')
+  // '-B <buyLimitPrice>'
+  .number('B')
+  .alias('B', 'buy-limit')
+  .alias('B', 'E')
+  .alias('B', 'entry-limit')
+  .describe('B', 'Set buy stop-limit order limit price (if different from buy price)')
   // '-s <stopPrice>'
   .number('s')
   .alias('s', 'stop')
@@ -32,7 +38,7 @@ const { argv } = require('yargs')
   // '-l <limitPrice>'
   .number('l')
   .alias('l', 'limit')
-  .describe('l', 'Set stop-limit order limit sell price (if different from stop price).')
+  .describe('l', 'Set sell stop-limit order limit price (if different from stop price)')
   // '-t <targetPrice>'
   .number('t')
   .alias('t', 'target')
@@ -47,8 +53,8 @@ const { argv } = require('yargs')
   .describe('S', 'Set amount to sell (scale out) at target price (if different from amount)');
 
 let {
-  p: pair, a: amount, b: buyPrice, s: stopPrice, l: limitPrice, t: targetPrice, c: cancelPrice,
-  S: scaleOutAmount,
+  p: pair, a: amount, b: buyPrice, B: buyLimitPrice, s: stopPrice, l: limitPrice, t: targetPrice,
+  c: cancelPrice, S: scaleOutAmount,
 } = argv;
 
 pair = pair.toUpperCase();
@@ -96,6 +102,10 @@ const binance = new Binance().options({
 
     if (buyPrice) {
       buyPrice = binance.roundTicks(buyPrice, tickSize);
+
+      if (buyLimitPrice) {
+        buyLimitPrice = binance.roundTicks(buyLimitPrice, tickSize);
+      }
 
       if (buyPrice < minPrice) {
         console.error(`Buy price ${buyPrice} does not meet minimum order price ${minPrice}.`);
@@ -255,7 +265,7 @@ const binance = new Binance().options({
         console.log(`${pair} price: ${currentPrice}`);
 
         if (buyPrice > currentPrice) {
-          binance.buy(pair, amount, buyPrice, { stopPrice: buyPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, buyComplete);
+          binance.buy(pair, amount, buyLimitPrice || buyPrice, { stopPrice: buyPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         } else {
           binance.buy(pair, amount, buyPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         }
