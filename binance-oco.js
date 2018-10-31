@@ -50,12 +50,19 @@ const { argv } = require('yargs')
   // '-S <scaleOutAmount>'
   .number('S')
   .alias('S', 'scaleOutAmount')
-  .describe('S', 'Set amount to sell (scale out) at target price (if different from amount)');
+  .describe('S', 'Set amount to sell (scale out) at target price (if different from amount)')
+  // '--non-bnb-fees'
+  .boolean('F')
+  .alias('F', 'non-bnb-fees')
+  .describe('F', 'Calculate stop/target sell amounts assuming not paying fees using BNB')
+  .default('F', false);
 
 let {
   p: pair, a: amount, b: buyPrice, B: buyLimitPrice, s: stopPrice, l: limitPrice, t: targetPrice,
   c: cancelPrice, S: scaleOutAmount,
 } = argv;
+
+const { F: nonBnbFees } = argv;
 
 pair = pair.toUpperCase();
 
@@ -185,7 +192,7 @@ const binance = new Binance().options({
 
     const calculateSellAmount = function (commissionAsset, sellAmount) {
       // Adjust sell amount if BNB not used for trading fee
-      return (commissionAsset === 'BNB') ? sellAmount : (sellAmount * (1 - NON_BNB_TRADING_FEE));
+      return (commissionAsset === 'BNB' && !nonBnbFees) ? sellAmount : (sellAmount * (1 - NON_BNB_TRADING_FEE));
     };
 
     const calculateStopAndTargetAmounts = function (commissionAsset) {
