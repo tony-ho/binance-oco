@@ -152,6 +152,19 @@ const binance = new Binance().options({
         console.error(`Target order does not meet minimum order value ${minNotional}.`);
         process.exit(1);
       }
+
+      const remainingAmount = amount - targetSellAmount;
+      if (remainingAmount && stopPrice) {
+        if (remainingAmount < minQty) {
+          console.error(`Stop amount after scale out (${remainingAmount}) will not meet minimum order amount ${minQty}.`);
+          process.exit(1);
+        }
+
+        if (stopPrice * remainingAmount < minNotional) {
+          console.error(`Stop order after scale out will not meet minimum order value ${minNotional}.`);
+          process.exit(1);
+        }
+      }
     }
 
     if (cancelPrice) {
