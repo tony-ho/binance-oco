@@ -72,6 +72,10 @@ const loggerFormat = format.printf(info => `${info.timestamp} - ${JSON.stringify
 
 const logPath = `${process.env.LOGBASEPATH}${pair}-${new Date()}.log`;
 
+const moment = require('moment');
+
+let lastPriceUpdate;
+
 const options = {
   console: {
     level: 'debug',
@@ -326,9 +330,15 @@ const binance = new Binance().options({
 
       if (buyOrderId) {
         if (!cancelPrice) {
-          logger.info(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+          if (!lastPriceUpdate || moment().diff(lastPriceUpdate, 'minute') > 5) {
+            logger.info(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+            lastPriceUpdate = moment();
+          }
         } else {
-          logger.info(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
+          if (!lastPriceUpdate || moment().diff(lastPriceUpdate, 'minute') > 5) {
+            logger.info(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
+            lastPriceUpdate = moment();
+          }
 
           if (((price < buyPrice && price <= cancelPrice)
             || (price > buyPrice && price >= cancelPrice))
