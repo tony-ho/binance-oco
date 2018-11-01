@@ -66,6 +66,39 @@ const { F: nonBnbFees } = argv;
 
 pair = pair.toUpperCase();
 
+const { createLogger, format, transports } = require('winston');
+
+const loggerFormat = format.printf(info => `${info.timestamp} - ${JSON.stringify(info.message)}`);
+
+const logPath = `${process.env.LOGBASEPATH}${pair}-${new Date()}.log`;
+
+const options = {
+  console: {
+    level: 'debug',
+    handleExceptions: true,
+    format: format.combine(
+      format.timestamp(),
+      loggerFormat,
+    ),
+  },
+  file: {
+    level: 'info',
+    filename: `${logPath}`,
+    handleExceptions: true,
+    format: format.combine(
+      format.timestamp(),
+      format.json(),
+    ),
+  },
+};
+const logger = createLogger({
+  transports: [
+    new transports.Console(options.console),
+    new transports.File(options.file),
+  ],
+});
+
+
 const Binance = require('node-binance-api');
 
 const binance = new Binance().options({
@@ -76,13 +109,13 @@ const binance = new Binance().options({
 }, () => {
   binance.exchangeInfo((exchangeInfoError, exchangeInfoData) => {
     if (exchangeInfoError) {
-      console.error('Could not pull exchange info', exchangeInfoError.body);
+      logger.error('Could not pull exchange info', exchangeInfoError.body);
       process.exit(1);
     }
 
     const symbolData = exchangeInfoData.symbols.find(ei => ei.symbol === pair);
     if (!symbolData) {
-      console.error(`Could not pull exchange info for ${pair}`);
+      logger.error(`Could not pull exchange info for ${pair}`);
       process.exit(1);
     }
 
@@ -205,12 +238,12 @@ const binance = new Binance().options({
 
     const sellComplete = function (error, response) {
       if (error) {
-        console.error('Sell error', error.body);
+        logger.error('Sell error', error.body);
         process.exit(1);
       }
 
-      console.log('Sell response', response);
-      console.log(`order id: ${response.orderId}`);
+      logger.info('Sell response', response);
+      logger.info(`order id: ${response.orderId}`);
 
       if (!(stopPrice && targetPrice)) {
         process.exit();
@@ -224,10 +257,12 @@ const binance = new Binance().options({
     };
 
     const placeStopOrder = function () {
+      logger.info(`>>> Placing a STOP order - (stop: ${stopPrice}, limit: ${limitPrice || stopPrice}) for ${stopSellAmount}.`);
       binance.sell(pair, stopSellAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, sellComplete);
     };
 
     const placeTargetOrder = function () {
+      logger.info(`>>> Placing a TARGET order - (limit: ${targetPrice}) for ${targetSellAmount}, and recalculating position.`);
       binance.sell(pair, targetSellAmount, targetPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, sellComplete);
       if (stopPrice && targetSellAmount !== stopSellAmount) {
         stopSellAmount -= targetSellAmount;
@@ -249,12 +284,12 @@ const binance = new Binance().options({
 
     const buyComplete = function (error, response) {
       if (error) {
-        console.error('Buy error', error.body);
+        logger.error('Buy error', error.body);
         process.exit(1);
       }
 
-      console.log('Buy response', response);
-      console.log(`order id: ${response.orderId}`);
+      logger.info('Buy response', response);
+      logger.info(`order id: ${response.orderId}`);
 
       if (response.status === 'FILLED') {
         calculateStopAndTargetAmounts(response.fills[0].commissionAsset);
@@ -265,15 +300,18 @@ const binance = new Binance().options({
     };
 
     if (buyPrice === 0) {
+      logger.info(`>>> Placing a buy MARKET order for ${amount}.`);
       binance.marketBuy(pair, amount, { type: 'MARKET', newOrderRespType: 'FULL' }, buyComplete);
     } else if (buyPrice > 0) {
       binance.prices(pair, (error, ticker) => {
         const currentPrice = ticker[pair];
-        console.log(`${pair} price: ${currentPrice}`);
+        logger.info(`${pair} price: ${currentPrice}`);
 
         if (buyPrice > currentPrice) {
+          logger.info(`>>> Placing a BUY order - (trigger: ${buyPrice}, limit: ${buyLimitPrice || buyPrice}) for ${amount}.`);
           binance.buy(pair, amount, buyLimitPrice || buyPrice, { stopPrice: buyPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         } else {
+          logger.info(`>>> Placing a BUY order - (limit: ${buyPrice}) for ${amount}.`);
           binance.buy(pair, amount, buyPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         }
       });
@@ -288,53 +326,56 @@ const binance = new Binance().options({
 
       if (buyOrderId) {
         if (!cancelPrice) {
-          console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+          logger.info(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
         } else {
-          console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
+          logger.info(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
 
           if (((price < buyPrice && price <= cancelPrice)
             || (price > buyPrice && price >= cancelPrice))
             && !isCancelling) {
             isCancelling = true;
+            logger.info(`<<< Cancel BUY order - (reason: cancel price ${cancelPrice} was breached).`);
             binance.cancel(symbol, buyOrderId, (error, response) => {
               isCancelling = false;
               if (error) {
-                console.error(`${symbol} cancel error:`, error.body);
+                logger.error(`${symbol} cancel error:`, error.body);
                 return;
               }
 
-              console.log(`${symbol} cancel response:`, response);
+              logger.info(`${symbol} cancel response:`, response);
               process.exit(0);
             });
           }
         }
       } else if (stopOrderId || targetOrderId) {
-        console.log(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
+        logger.info(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
 
         if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
           isCancelling = true;
+          logger.info(`<<< Cancel STOP order - (reason: target price ${targetPrice} was hit).`);
           binance.cancel(symbol, stopOrderId, (error, response) => {
             isCancelling = false;
             if (error) {
-              console.error(`${symbol} cancel error:`, error.body);
+              logger.error(`${symbol} cancel error:`, error.body);
               return;
             }
 
             stopOrderId = 0;
-            console.log(`${symbol} cancel response:`, response);
+            logger.info(`${symbol} cancel response:`, response);
             placeTargetOrder();
           });
         } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
           isCancelling = true;
+          logger.info(`<<< Cancel TARGET order - (reason: stop price ${stopPrice} was hit).`);
           binance.cancel(symbol, targetOrderId, (error, response) => {
             isCancelling = false;
             if (error) {
-              console.error(`${symbol} cancel error:`, error.body);
+              logger.error(`${symbol} cancel error:`, error.body);
               return;
             }
 
             targetOrderId = 0;
-            console.log(`${symbol} cancel response:`, response);
+            logger.info(`${symbol} cancel response:`, response);
             if (targetSellAmount !== stopSellAmount) {
               stopSellAmount += targetSellAmount;
             }
@@ -349,15 +390,16 @@ const binance = new Binance().options({
         s: symbol, p: price, q: quantity, S: side, o: orderType, i: orderId, X: orderStatus,
       } = data;
 
-      console.log(`${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
-      console.log(`..price: ${price}, quantity: ${quantity}`);
+      logger.info(`${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
+      logger.info(`..price: ${price}, quantity: ${quantity}`);
 
       if (orderStatus === 'NEW' || orderStatus === 'PARTIALLY_FILLED') {
         return;
       }
 
       if (orderStatus !== 'FILLED') {
-        console.log(`Order ${orderStatus}. Reason: ${data.r}`);
+        logger.error(`Order ${orderStatus}. Reason: ${data.r}`);
+        // TODO: LOG A BIG WARNING IF THIS ORDER WAS THE STOP!!! LOG OUT REMAINING POSITION
         process.exit(1);
       }
 
