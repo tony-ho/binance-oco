@@ -67,7 +67,7 @@ const { F: nonBnbFees } = argv;
 pair = pair.toUpperCase();
 
 const { createLogger, format, transports } = require('winston');
-
+// TODO: Log an md5 so we can see each script invocation
 const loggerFormat = format.printf(info => `${info.timestamp} - ${JSON.stringify(info.message)}`);
 
 const logPath = `${process.env.LOGBASEPATH}${pair}-${new Date()}.log`;
@@ -242,12 +242,12 @@ const binance = new Binance().options({
 
     const sellComplete = function (error, response) {
       if (error) {
-        logger.error('Sell error', error.body);
+        logger.error(`Sell error ${error.body}`);
         process.exit(1);
       }
 
-      logger.info('Sell response', response);
-      logger.info(`order id: ${response.orderId}`);
+      logger.debug(`Sell response ${response}`);
+      logger.info(`>>> SELL order placed ${response.symbol} : #${response.orderId} >>>`);
 
       if (!(stopPrice && targetPrice)) {
         process.exit();
@@ -261,12 +261,12 @@ const binance = new Binance().options({
     };
 
     const placeStopOrder = function () {
-      logger.info(`>>> Placing a STOP order - (stop: ${stopPrice}, limit: ${limitPrice || stopPrice}) for ${stopSellAmount}.`);
+      logger.info(`>>> Placing SELL order ${pair} (STOP) - (stop: ${stopPrice}, limit: ${limitPrice || stopPrice}) for ${stopSellAmount}.`);
       binance.sell(pair, stopSellAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, sellComplete);
     };
 
     const placeTargetOrder = function () {
-      logger.info(`>>> Placing a TARGET order - (limit: ${targetPrice}) for ${targetSellAmount}, and recalculating position.`);
+      logger.info(`>>> Placing SELL order ${pair} (TARGET) - (limit: ${targetPrice}) for ${targetSellAmount}.`);
       binance.sell(pair, targetSellAmount, targetPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, sellComplete);
       if (stopPrice && targetSellAmount !== stopSellAmount) {
         stopSellAmount -= targetSellAmount;
@@ -288,12 +288,12 @@ const binance = new Binance().options({
 
     const buyComplete = function (error, response) {
       if (error) {
-        logger.error('Buy error', error.body);
+        logger.error(`Buy error ${error.body}`);
         process.exit(1);
       }
 
-      logger.info('Buy response', response);
-      logger.info(`order id: ${response.orderId}`);
+      logger.debug(`Buy response : ${response}`);
+      logger.info(`>>> BUY order placed ${response.symbol} : #${response.orderId} >>>`);
 
       if (response.status === 'FILLED') {
         calculateStopAndTargetAmounts(response.fills[0].commissionAsset);
@@ -304,7 +304,7 @@ const binance = new Binance().options({
     };
 
     if (buyPrice === 0) {
-      logger.info(`>>> Placing a buy MARKET order for ${amount}.`);
+      logger.info(`>>> Placing a BUY MARKET order ${pair} for ${amount}.`);
       binance.marketBuy(pair, amount, { type: 'MARKET', newOrderRespType: 'FULL' }, buyComplete);
     } else if (buyPrice > 0) {
       binance.prices(pair, (error, ticker) => {
@@ -312,10 +312,10 @@ const binance = new Binance().options({
         logger.info(`${pair} price: ${currentPrice}`);
 
         if (buyPrice > currentPrice) {
-          logger.info(`>>> Placing a BUY order - (trigger: ${buyPrice}, limit: ${buyLimitPrice || buyPrice}) for ${amount}.`);
+          logger.info(`>>> Placing a BUY order ${pair} - (trigger: ${buyPrice}, limit: ${buyLimitPrice || buyPrice}) for ${amount}.`);
           binance.buy(pair, amount, buyLimitPrice || buyPrice, { stopPrice: buyPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         } else {
-          logger.info(`>>> Placing a BUY order - (limit: ${buyPrice}) for ${amount}.`);
+          logger.info(`>>> Placing a BUY order ${pair} - (limit: ${buyPrice}) for ${amount}.`);
           binance.buy(pair, amount, buyPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         }
       });
@@ -344,48 +344,47 @@ const binance = new Binance().options({
             || (price > buyPrice && price >= cancelPrice))
             && !isCancelling) {
             isCancelling = true;
-            logger.info(`<<< Cancel BUY order - (reason: cancel price ${cancelPrice} was breached).`);
+            logger.info(`<<< Cancel BUY order ${symbol} : #${buyOrderId} - (reason: cancel price ${cancelPrice} was breached).`);
             binance.cancel(symbol, buyOrderId, (error, response) => {
               isCancelling = false;
               if (error) {
                 logger.error(`${symbol} cancel error:`, error.body);
                 return;
               }
-
-              logger.info(`${symbol} cancel response:`, response);
+              logger.info(`<<< BUY Order ${symbol} : #${buyOrderId} cancelled. <<<`);
+              logger.debug(`${symbol} cancel response: ${response}`);
               process.exit(0);
             });
           }
         }
       } else if (stopOrderId || targetOrderId) {
         logger.info(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
-
         if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
           isCancelling = true;
-          logger.info(`<<< Cancel STOP order - (reason: target price ${targetPrice} was hit).`);
+          logger.info(`<<< Cancel STOP order ${symbol} : #${stopOrderId} - (reason: target price ${targetPrice} was hit).`);
           binance.cancel(symbol, stopOrderId, (error, response) => {
             isCancelling = false;
             if (error) {
-              logger.error(`${symbol} cancel error:`, error.body);
+              logger.error(`${symbol} cancel error: ${error.body}`);
               return;
             }
-
+            logger.info(`<<< STOP ${symbol} : #${stopOrderId} cancelled. <<<`);
             stopOrderId = 0;
-            logger.info(`${symbol} cancel response:`, response);
+            logger.debug(`${symbol} cancel response: ${response}`);
             placeTargetOrder();
           });
         } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
           isCancelling = true;
-          logger.info(`<<< Cancel TARGET order - (reason: stop price ${stopPrice} was hit).`);
+          logger.info(`<<< Cancel TARGET order ${symbol} : #${targetOrderId} - (reason: stop price ${stopPrice} was hit).`);
           binance.cancel(symbol, targetOrderId, (error, response) => {
             isCancelling = false;
             if (error) {
-              logger.error(`${symbol} cancel error:`, error.body);
+              logger.error(`${symbol} cancel error: ${error.body}`);
               return;
             }
-
+            logger.info(`<<< TARGET ${symbol} : #${targetOrderId} cancelled. <<<`);
             targetOrderId = 0;
-            logger.info(`${symbol} cancel response:`, response);
+            logger.debug(`${symbol} cancel response: ${response}`);
             if (targetSellAmount !== stopSellAmount) {
               stopSellAmount += targetSellAmount;
             }
@@ -400,16 +399,19 @@ const binance = new Binance().options({
         s: symbol, p: price, q: quantity, S: side, o: orderType, i: orderId, X: orderStatus,
       } = data;
 
-      logger.info(`${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
-      logger.info(`..price: ${price}, quantity: ${quantity}`);
-
+      logger.info(`Order Executed: ${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
+      logger.info(`At price: ${price}, quantity: ${quantity}`);
       if (orderStatus === 'NEW' || orderStatus === 'PARTIALLY_FILLED') {
         return;
       }
 
       if (orderStatus !== 'FILLED') {
         logger.error(`Order ${orderStatus}. Reason: ${data.r}`);
-        // TODO: LOG A BIG WARNING IF THIS ORDER WAS THE STOP!!! LOG OUT REMAINING POSITION
+        if (orderId === stopOrderId) {
+          logger.error(`WARNING STOP ORDER ${symbol} WAS NOT FILLED - YOU MUST CLOSE THE REMAINING POSITION OF ${stopSellAmount} MANUALLY.`);
+        }
+        // TODO: What if the incomplete order was a sell or target - we need script to stay
+        //  alive in this case.
         process.exit(1);
       }
 
@@ -442,4 +444,5 @@ const binance = new Binance().options({
 process.on('exit', () => {
   const endpoints = binance.websockets.subscriptions();
   binance.websockets.terminate(Object.entries(endpoints));
+  logger.info('Script terminated.');
 });
