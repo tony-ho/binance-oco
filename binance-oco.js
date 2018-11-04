@@ -70,7 +70,7 @@ const { createLogger, format, transports } = require('winston');
 
 const loggerFormat = format.printf(info => `${info.timestamp} - ${JSON.stringify(info.message)}`);
 
-const logPath = `${process.env.LOGBASEPATH}${pair}-${new Date()}.log`;
+const logPath = `${process.env.LOGBASEPATH || ''}${pair}-${new Date()}.log`;
 
 const moment = require('moment');
 
@@ -246,7 +246,7 @@ const binance = new Binance().options({
         process.exit(1);
       }
 
-      logger.debug(`Sell response ${response}`);
+      logger.debug(`Sell response ${JSON.stringify(response)}`);
       logger.info(`>>> SELL order placed ${response.symbol} : #${response.orderId} >>>`);
 
       if (!(stopPrice && targetPrice)) {
@@ -292,7 +292,7 @@ const binance = new Binance().options({
         process.exit(1);
       }
 
-      logger.debug(`Buy response : ${response}`);
+      logger.debug(`Buy response : ${JSON.stringify(response)}`);
       logger.info(`>>> BUY order placed ${response.symbol} : #${response.orderId} >>>`);
 
       if (response.status === 'FILLED') {
@@ -352,13 +352,17 @@ const binance = new Binance().options({
                 return;
               }
               logger.info(`<<< BUY Order ${symbol} : #${buyOrderId} cancelled. <<<`);
-              logger.debug(`${symbol} cancel response: ${response}`);
+              logger.debug(`${symbol} cancel response: ${JSON.stringify(response)}`);
               process.exit(0);
             });
           }
         }
       } else if (stopOrderId || targetOrderId) {
-        logger.info(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
+        if (!lastPriceUpdate || moment().diff(lastPriceUpdate, 'minute') > 5) {
+          logger.info(`${symbol} LIVE trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
+          lastPriceUpdate = moment();
+        }
+
         if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
           isCancelling = true;
           logger.info(`<<< Cancel STOP order ${symbol} : #${stopOrderId} - (reason: target price ${targetPrice} was hit).`);
@@ -370,7 +374,7 @@ const binance = new Binance().options({
             }
             logger.info(`<<< STOP ${symbol} : #${stopOrderId} cancelled. <<<`);
             stopOrderId = 0;
-            logger.debug(`${symbol} cancel response: ${response}`);
+            logger.debug(`${symbol} cancel response: ${JSON.stringify(response)}`);
             placeTargetOrder();
           });
         } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
