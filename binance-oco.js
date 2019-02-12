@@ -264,6 +264,9 @@ const binance = new Binance().options({
       }
     };
 
+    let isLimitEntry = false;
+    let isStopEntry = false;
+
     if (buyPrice === 0) {
       binance.marketBuy(pair, amount, { type: 'MARKET', newOrderRespType: 'FULL' }, buyComplete);
     } else if (buyPrice > 0) {
@@ -272,8 +275,10 @@ const binance = new Binance().options({
         console.log(`${pair} price: ${currentPrice}`);
 
         if (buyPrice > currentPrice) {
+          isStopEntry = true;
           binance.buy(pair, amount, buyLimitPrice || buyPrice, { stopPrice: buyPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         } else {
+          isLimitEntry = true;
           binance.buy(pair, amount, buyPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, buyComplete);
         }
       });
@@ -292,8 +297,8 @@ const binance = new Binance().options({
         } else {
           console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
 
-          if (((price < buyPrice && price <= cancelPrice)
-            || (price > buyPrice && price >= cancelPrice))
+          if (((isStopEntry && price <= cancelPrice)
+            || (isLimitEntry && price >= cancelPrice))
             && !isCancelling) {
             isCancelling = true;
             binance.cancel(symbol, buyOrderId, (error, response) => {
