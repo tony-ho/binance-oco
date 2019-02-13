@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-/* eslint func-names: ["warn", "as-needed"] */
 
 require('dotenv').config();
 
@@ -190,12 +189,9 @@ const binance = new Binance().options({
 
     const NON_BNB_TRADING_FEE = 0.001;
 
-    const calculateSellAmount = function (commissionAsset, sellAmount) {
-      // Adjust sell amount if BNB not used for trading fee
-      return (commissionAsset === 'BNB' && !nonBnbFees) ? sellAmount : (sellAmount * (1 - NON_BNB_TRADING_FEE));
-    };
+    const calculateSellAmount = (commissionAsset, sellAmount) => ((commissionAsset === 'BNB' && !nonBnbFees) ? sellAmount : (sellAmount * (1 - NON_BNB_TRADING_FEE)));
 
-    const calculateStopAndTargetAmounts = function (commissionAsset) {
+    const calculateStopAndTargetAmounts = (commissionAsset) => {
       stopSellAmount = calculateSellAmount(commissionAsset, stopSellAmount);
       targetSellAmount = calculateSellAmount(commissionAsset, targetSellAmount);
     };
@@ -203,7 +199,7 @@ const binance = new Binance().options({
     let stopOrderId = 0;
     let targetOrderId = 0;
 
-    const sellComplete = function (error, response) {
+    const sellComplete = (error, response) => {
       if (error) {
         console.error('Sell error', error.body);
         process.exit(1);
@@ -223,11 +219,11 @@ const binance = new Binance().options({
       }
     };
 
-    const placeStopOrder = function () {
+    const placeStopOrder = () => {
       binance.sell(pair, stopSellAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' }, sellComplete);
     };
 
-    const placeTargetOrder = function () {
+    const placeTargetOrder = () => {
       binance.sell(pair, targetSellAmount, targetPrice, { type: 'LIMIT', newOrderRespType: 'FULL' }, sellComplete);
       if (stopPrice && targetSellAmount !== stopSellAmount) {
         stopSellAmount -= targetSellAmount;
@@ -235,7 +231,7 @@ const binance = new Binance().options({
       }
     };
 
-    const placeSellOrder = function () {
+    const placeSellOrder = () => {
       if (stopPrice) {
         placeStopOrder();
       } else if (targetPrice) {
@@ -247,7 +243,7 @@ const binance = new Binance().options({
 
     let buyOrderId = 0;
 
-    const buyComplete = function (error, response) {
+    const buyComplete = (error, response) => {
       if (error) {
         console.error('Buy error', error.body);
         process.exit(1);
@@ -349,7 +345,7 @@ const binance = new Binance().options({
       }
     });
 
-    const checkOrderFilled = function (data, orderFilled) {
+    const checkOrderFilled = (data, orderFilled) => {
       const {
         s: symbol, p: price, q: quantity, S: side, o: orderType, i: orderId, X: orderStatus,
       } = data;
