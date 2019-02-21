@@ -3,7 +3,9 @@
   "version": "1.5.2",
   "description": "A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on Binance",
   "main": "binance-oco.js",
-  "bin": "binance-oco.js",
+  "bin": {
+    "binance-oco": "./cli.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tony-ho/binance-oco.git"
