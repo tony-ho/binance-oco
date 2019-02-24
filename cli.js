@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 
 require('dotenv').config();
+require('debug').enable('binance-oco');
 
 const { argv } = require('yargs')
   .usage('Usage: binance-oco')
@@ -61,6 +61,7 @@ const {
   c: cancelPrice, S: scaleOutAmount, F: nonBnbFees,
 } = argv;
 
+const debug = require('debug')('binance-oco');
 const { binanceOco } = require('./binance-oco');
 
 (async () => {
@@ -79,7 +80,7 @@ const { binanceOco } = require('./binance-oco');
     });
     process.exit(0);
   } catch (err) {
-    console.error(err.message);
+    debug(err.message);
     process.exit(1);
   }
 })();

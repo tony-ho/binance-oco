@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/tony-ho/binance-oco#readme",
   "dependencies": {
+    "debug": "^4.1.1",
     "dotenv": "^6.0.0",
     "node-binance-api": "0.9.0",
     "yargs": "^11.0.0"

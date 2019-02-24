@@ -1,5 +1,4 @@
-/* eslint-disable no-console */
-
+const debug = require('debug')('binance-oco');
 const Binance = require('node-binance-api');
 
 const binanceOco = options => new Promise((resolve, reject) => {
@@ -151,8 +150,8 @@ const binanceOco = options => new Promise((resolve, reject) => {
           return;
         }
 
-        console.log('Sell response', response);
-        console.log(`order id: ${response.orderId}`);
+        debug('Sell response: %o', response);
+        debug(`order id: ${response.orderId}`);
 
         if (!(stopPrice && targetPrice)) {
           resolve();
@@ -196,8 +195,8 @@ const binanceOco = options => new Promise((resolve, reject) => {
           return;
         }
 
-        console.log('Buy response', response);
-        console.log(`order id: ${response.orderId}`);
+        debug('Buy response: %o', response);
+        debug(`order id: ${response.orderId}`);
 
         if (response.status === 'FILLED') {
           calculateStopAndTargetAmounts(response.fills[0].commissionAsset);
@@ -215,7 +214,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
       } else if (buyPrice > 0) {
         binance.prices(pair, (error, ticker) => {
           const currentPrice = ticker[pair];
-          console.log(`${pair} price: ${currentPrice}`);
+          debug(`${pair} price: ${currentPrice}`);
 
           if (buyPrice > currentPrice) {
             isStopEntry = true;
@@ -236,9 +235,9 @@ const binanceOco = options => new Promise((resolve, reject) => {
 
         if (buyOrderId) {
           if (!cancelPrice) {
-            console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+            debug(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
           } else {
-            console.log(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
+            debug(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
 
             if (((isStopEntry && price <= cancelPrice)
               || (isLimitEntry && price >= cancelPrice))
@@ -251,13 +250,13 @@ const binanceOco = options => new Promise((resolve, reject) => {
                   return;
                 }
 
-                console.log(`${symbol} cancel response:`, response);
+                debug(`${symbol} cancel response: %o`, response);
                 resolve();
               });
             }
           }
         } else if (stopOrderId || targetOrderId) {
-          console.log(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
+          debug(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
 
           if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
             isCancelling = true;
@@ -269,7 +268,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
               }
 
               stopOrderId = 0;
-              console.log(`${symbol} cancel response:`, response);
+              debug(`${symbol} cancel response:`, response);
               placeTargetOrder();
             });
           } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
@@ -282,7 +281,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
               }
 
               targetOrderId = 0;
-              console.log(`${symbol} cancel response:`, response);
+              debug(`${symbol} cancel response: %o`, response);
               if (targetSellAmount !== stopSellAmount) {
                 stopSellAmount += targetSellAmount;
               }
@@ -297,8 +296,8 @@ const binanceOco = options => new Promise((resolve, reject) => {
           s: symbol, p: price, q: quantity, S: side, o: orderType, i: orderId, X: orderStatus,
         } = data;
 
-        console.log(`${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
-        console.log(`..price: ${price}, quantity: ${quantity}`);
+        debug(`${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
+        debug(`..price: ${price}, quantity: ${quantity}`);
 
         if (orderStatus === 'NEW' || orderStatus === 'PARTIALLY_FILLED') {
           return;
