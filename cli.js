@@ -48,7 +48,8 @@ const { argv } = require('yargs')
   .describe('c', 'Set price at which to cancel buy order')
   // '-S <scaleOutAmount>'
   .number('S')
-  .alias('S', 'scaleOutAmount')
+  .alias('S', 'scale-out-amount')
+  .alias('S', 'A')
   .describe('S', 'Set amount to sell (scale out) at target price (if different from amount)')
   // '--non-bnb-fees'
   .boolean('F')
