@@ -76,7 +76,13 @@ Place a buy order for 1 BNB @ 0.002 BTC. Once filled, place a stop-limit sell @ 
 binance-oco -p BNBBTC -a 1 -b 0.002 -s 0.001 -t 0.003
 ```
 
-Place a buy order for 2 BNB @ 0.002 BTC. Once filled, place a stop-limit sell @ 0.001 BTC. If a price of 0.003 BTC is reached, cancel stop-limit order and place a limit sell for 1 BNB @ 0.003 BTC, and a stop-limit sell for the remaining 1 BNB @ 0.001 BTC. This process is referred to as 'scaling out' of a position:
+Place a buy order for 2 BNB @ 0.002 BTC. Once filled, place:
+- a limit sell for the scale out amount of 1 BNB @ 0.003 BTC, and
+- a stop-limit sell for the remaining 1 BNB @ 0.001 BTC
+
+If the price drops to the stop price of 0.001 BTC, cancel limit order and place a stop-limit sell for the remaining 1 BNB @ 0.001 BTC.
+
+If a price of 0.003 BTC is reached, exit once the limit order is filled and leave the stop-limit sell for the remaining 1 BNB. This process is referred to as 'scaling out' of a position.
 ```
 binance-oco -p BNBBTC -a 2 -b 0.002 -s 0.001 -t 0.003 -S 1
 ```

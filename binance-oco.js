@@ -53,49 +53,31 @@ const binanceOco = options => new Promise((resolve, reject) => {
     }
   };
 
-  let stopOrderId = 0;
-  let targetOrderId = 0;
-
-  const placeStopOrderAsync = async () => {
+  const placeStopOrderAsync = async (orderAmount) => {
     try {
-      const response = await binance.sellAsync(pair, stopSellAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' });
+      const response = await binance.sellAsync(pair, orderAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' });
 
       debug('Sell response: %o', response);
       debug(`order id: ${response.orderId}`);
 
-      if (targetPrice) {
-        stopOrderId = response.orderId;
-      } else {
-        disconnect();
-        resolve();
-      }
+      return response.orderId;
     } catch (err) {
       disconnect();
-      reject(new Error(err.body));
+      return reject(new Error(err.body));
     }
   };
 
-  const placeTargetOrderAsync = async () => {
+  const placeTargetOrderAsync = async (orderAmount) => {
     try {
-      const response = await binance.sellAsync(pair, targetSellAmount, targetPrice, { type: 'LIMIT', newOrderRespType: 'FULL' });
+      const response = await binance.sellAsync(pair, orderAmount, targetPrice, { type: 'LIMIT', newOrderRespType: 'FULL' });
 
       debug('Sell response: %o', response);
       debug(`order id: ${response.orderId}`);
 
-      if (stopPrice) {
-        targetOrderId = response.orderId;
-
-        if (targetSellAmount !== stopSellAmount) {
-          stopSellAmount -= targetSellAmount;
-          await placeStopOrderAsync();
-        }
-      } else {
-        disconnect();
-        resolve();
-      }
+      return response.orderId;
     } catch (err) {
       disconnect();
-      reject(new Error(err.body));
+      return reject(new Error(err.body));
     }
   };
 
@@ -120,19 +102,34 @@ const binanceOco = options => new Promise((resolve, reject) => {
     return true;
   };
 
+  let stopOrderId = 0;
+  let targetOrderId = 0;
+
   const placeSellOrderAsync = async () => {
     try {
-      if (stopPrice) {
-        await placeStopOrderAsync();
-      } else if (targetPrice) {
-        await placeTargetOrderAsync();
-      } else {
-        disconnect();
-        resolve();
+      if (stopPrice && targetPrice) {
+        if (targetSellAmount < stopSellAmount) {
+          await placeStopOrderAsync(stopSellAmount - targetSellAmount);
+          stopSellAmount = targetSellAmount;
+          targetOrderId = await placeTargetOrderAsync(targetSellAmount);
+          return targetOrderId;
+        }
+
+        stopOrderId = await placeStopOrderAsync(stopSellAmount);
+        return stopOrderId;
       }
+
+      if (stopPrice && !targetPrice) {
+        await placeStopOrderAsync(stopSellAmount);
+      } else if (!stopPrice && targetPrice) {
+        await placeTargetOrderAsync(targetSellAmount);
+      }
+
+      disconnect();
+      return resolve();
     } catch (err) {
       disconnect();
-      reject(err);
+      return reject(err);
     }
   };
 
@@ -162,14 +159,11 @@ const binanceOco = options => new Promise((resolve, reject) => {
         if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
           await cancelOrderAsync(symbol, stopOrderId);
           stopOrderId = 0;
-          await placeTargetOrderAsync();
+          targetOrderId = await placeTargetOrderAsync(targetSellAmount);
         } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
           await cancelOrderAsync(symbol, targetOrderId);
           targetOrderId = 0;
-          if (targetSellAmount !== stopSellAmount) {
-            stopSellAmount += targetSellAmount;
-          }
-          await placeStopOrderAsync();
+          stopOrderId = await placeStopOrderAsync(stopSellAmount);
         }
       }
     } catch (err) {
@@ -186,9 +180,14 @@ const binanceOco = options => new Promise((resolve, reject) => {
     const { i: orderId } = data;
     if (orderId === buyOrderId && isOrderFilled(data)) {
       buyOrderId = 0;
-      const { N: commissionAsset } = data;
-      calculateStopAndTargetAmounts(commissionAsset);
-      await placeSellOrderAsync();
+      if (stopPrice || targetPrice) {
+        const { N: commissionAsset } = data;
+        calculateStopAndTargetAmounts(commissionAsset);
+        await placeSellOrderAsync();
+      } else {
+        disconnect();
+        resolve();
+      }
     } else if (orderId === stopOrderId || orderId === targetOrderId) {
       if (isOrderFilled(data)) {
         disconnect();
@@ -324,10 +323,15 @@ const binanceOco = options => new Promise((resolve, reject) => {
         debug(`order id: ${response.orderId}`);
 
         if (response.status === 'FILLED') {
-          calculateStopAndTargetAmounts(response.fills[0].commissionAsset);
-          await placeSellOrderAsync();
+          if (stopPrice || targetPrice) {
+            calculateStopAndTargetAmounts(response.fills[0].commissionAsset);
+            await placeSellOrderAsync();
+          } else {
+            disconnect();
+            resolve();
+          }
         }
-      } else {
+      } else if (stopPrice || targetPrice) {
         await placeSellOrderAsync();
       }
     } catch (err) {
