@@ -4,11 +4,12 @@ const Binance = require('./lib/node-binance-api-async');
 const binanceOco = options => new Promise((resolve, reject) => {
   const {
     pair,
+    cancelPrice,
     nonBnbFees,
   } = options;
 
   let {
-    amount, buyPrice, buyLimitPrice, stopPrice, limitPrice, targetPrice, cancelPrice,
+    amount, buyPrice, buyLimitPrice, stopPrice, limitPrice, targetPrice,
     scaleOutAmount,
   } = options;
 
@@ -290,10 +291,6 @@ const binanceOco = options => new Promise((resolve, reject) => {
             throw new Error(`Stop order after scale out will not meet minimum order value ${minNotional}.`);
           }
         }
-      }
-
-      if (cancelPrice) {
-        cancelPrice = binance.roundTicks(cancelPrice, tickSize);
       }
 
       binance.websockets.userData(() => { }, executionCallback);
