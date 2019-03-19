@@ -29,7 +29,7 @@ const { argv } = require('yargs')
   .alias('B', 'buy-limit')
   .alias('B', 'E')
   .alias('B', 'entry-limit')
-  .describe('B', 'Set buy stop-limit order limit price (if different from buy price)')
+  .describe('B', 'Set buy stop-limit order limit price. If not set, market buy will be attempted at stop price.')
   // '-s <stopPrice>'
   .number('s')
   .alias('s', 'stop')
@@ -37,7 +37,7 @@ const { argv } = require('yargs')
   // '-l <limitPrice>'
   .number('l')
   .alias('l', 'limit')
-  .describe('l', 'Set sell stop-limit order limit price (if different from stop price)')
+  .describe('l', 'Set sell stop-limit order limit price. If not set, market sell will be attempted at stop price.')
   // '-t <targetPrice>'
   .number('t')
   .alias('t', 'target')

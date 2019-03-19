@@ -233,10 +233,6 @@ const binanceOco = options => new Promise((resolve, reject) => {
       if (buyPrice) {
         buyPrice = binance.roundTicks(buyPrice, tickSize);
 
-        if (buyLimitPrice) {
-          buyLimitPrice = binance.roundTicks(buyLimitPrice, tickSize);
-        }
-
         if (buyPrice < minPrice) {
           throw new Error(`Buy price ${buyPrice} does not meet minimum order price ${minPrice}.`);
         }
@@ -244,10 +240,38 @@ const binanceOco = options => new Promise((resolve, reject) => {
         if (buyPrice * amount < minNotional) {
           throw new Error(`Buy order does not meet minimum order value ${minNotional}.`);
         }
+
+        if (buyLimitPrice) {
+          buyLimitPrice = binance.roundTicks(buyLimitPrice, tickSize);
+        } else {
+          const balances = await binance.balanceAsync();
+          const { quoteAsset } = symbolData;
+          const { available } = balances[quoteAsset];
+          const maxAvailablePrice = binance.roundTicks(available / amount, tickSize);
+
+          const prices = await binance.avgPriceAsync(pair);
+          const currentPrice = Object.values(prices)[0];
+          const { multiplierUp } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
+          const maxPercentPrice = binance.roundTicks(currentPrice * multiplierUp, tickSize);
+
+          buyLimitPrice = Math.min(maxAvailablePrice, maxPercentPrice);
+
+          const { quotePrecision } = symbolData;
+          buyLimitPrice = (parseFloat(buyLimitPrice) - parseFloat(tickSize))
+            .toFixed(quotePrecision);
+        }
       }
 
       if (stopPrice) {
         stopPrice = binance.roundTicks(stopPrice, tickSize);
+
+        if (stopPrice < minPrice) {
+          throw new Error(`Stop price ${stopPrice} does not meet minimum order price ${minPrice}.`);
+        }
+
+        if (stopPrice * stopSellAmount < minNotional) {
+          throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
+        }
 
         if (limitPrice) {
           limitPrice = binance.roundTicks(limitPrice, tickSize);
@@ -260,13 +284,17 @@ const binanceOco = options => new Promise((resolve, reject) => {
             throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
           }
         } else {
-          if (stopPrice < minPrice) {
-            throw new Error(`Stop price ${stopPrice} does not meet minimum order price ${minPrice}.`);
-          }
+          const prices = await binance.avgPriceAsync(pair);
+          const currentPrice = Object.values(prices)[0];
+          const { multiplierDown } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
+          const minPercentPrice = binance.roundTicks(currentPrice * multiplierDown, tickSize);
+          const minNotionalPrice = binance.roundTicks(minNotional / stopSellAmount, tickSize);
 
-          if (stopPrice * stopSellAmount < minNotional) {
-            throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
-          }
+          limitPrice = Math.max(minPercentPrice, minNotionalPrice);
+
+          const { quotePrecision } = symbolData;
+          limitPrice = (parseFloat(limitPrice) + parseFloat(tickSize))
+            .toFixed(quotePrecision);
         }
       }
 
