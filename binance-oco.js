@@ -9,7 +9,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
   } = options;
 
   let {
-    amount, buyPrice, buyLimitPrice, stopPrice, limitPrice, targetPrice,
+    amount, buyPrice, buyLimitPrice, stopPrice, stopLimitPrice, targetPrice,
     scaleOutAmount,
   } = options;
 
@@ -56,7 +56,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
 
   const placeStopOrderAsync = async (orderAmount) => {
     try {
-      const response = await binance.sellAsync(pair, orderAmount, limitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' });
+      const response = await binance.sellAsync(pair, orderAmount, stopLimitPrice || stopPrice, { stopPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' });
 
       debug('Sell response: %o', response);
       debug(`order id: ${response.orderId}`);
@@ -273,14 +273,14 @@ const binanceOco = options => new Promise((resolve, reject) => {
           throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
         }
 
-        if (limitPrice) {
-          limitPrice = binance.roundTicks(limitPrice, tickSize);
+        if (stopLimitPrice) {
+          stopLimitPrice = binance.roundTicks(stopLimitPrice, tickSize);
 
-          if (limitPrice < minPrice) {
-            throw new Error(`Limit price ${limitPrice} does not meet minimum order price ${minPrice}.`);
+          if (stopLimitPrice < minPrice) {
+            throw new Error(`Stop limit price ${stopLimitPrice} does not meet minimum order price ${minPrice}.`);
           }
 
-          if (limitPrice * stopSellAmount < minNotional) {
+          if (stopLimitPrice * stopSellAmount < minNotional) {
             throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
           }
         } else {
@@ -290,10 +290,10 @@ const binanceOco = options => new Promise((resolve, reject) => {
           const minPercentPrice = binance.roundTicks(currentPrice * multiplierDown, tickSize);
           const minNotionalPrice = binance.roundTicks(minNotional / stopSellAmount, tickSize);
 
-          limitPrice = Math.max(minPercentPrice, minNotionalPrice);
+          stopLimitPrice = Math.max(minPercentPrice, minNotionalPrice);
 
           const { quotePrecision } = symbolData;
-          limitPrice = (parseFloat(limitPrice) + parseFloat(tickSize))
+          stopLimitPrice = (parseFloat(stopLimitPrice) + parseFloat(tickSize))
             .toFixed(quotePrecision);
         }
       }

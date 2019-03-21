@@ -34,9 +34,10 @@ const { argv } = require('yargs')
   .number('s')
   .alias('s', 'stop')
   .describe('s', 'Set stop-limit order stop price')
-  // '-l <limitPrice>'
+  // '-l <stopLimitPrice>'
   .number('l')
   .alias('l', 'limit')
+  .alias('l', 'stop-limit')
   .describe('l', 'Set sell stop-limit order limit price. If not set, market sell will be attempted at stop price.')
   // '-t <targetPrice>'
   .number('t')
@@ -58,8 +59,8 @@ const { argv } = require('yargs')
   .default('F', false);
 
 const {
-  p: pair, a: amount, b: buyPrice, B: buyLimitPrice, s: stopPrice, l: limitPrice, t: targetPrice,
-  c: cancelPrice, S: scaleOutAmount, F: nonBnbFees,
+  p: pair, a: amount, b: buyPrice, B: buyLimitPrice, s: stopPrice, l: stopLimitPrice,
+  t: targetPrice, c: cancelPrice, S: scaleOutAmount, F: nonBnbFees,
 } = argv;
 
 const debug = require('debug')('binance-oco');
@@ -73,7 +74,7 @@ const { binanceOco } = require('./binance-oco');
       buyPrice,
       buyLimitPrice,
       stopPrice,
-      limitPrice,
+      stopLimitPrice,
       targetPrice,
       cancelPrice,
       scaleOutAmount,
