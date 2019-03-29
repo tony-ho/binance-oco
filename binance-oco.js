@@ -228,6 +228,11 @@ const binanceOco = options => new Promise((resolve, reject) => {
         if (scaleOutAmount < minQty) {
           throw new Error(`Scale out amount ${scaleOutAmount} does not meet minimum order amount ${minQty}.`);
         }
+
+        const remainingAmount = amount - scaleOutAmount;
+        if (remainingAmount < minQty) {
+          throw new Error(`Stop amount after scale out (${remainingAmount}) will not meet minimum order amount ${minQty}.`);
+        }
       }
 
       stopSellAmount = amount;
@@ -272,7 +277,10 @@ const binanceOco = options => new Promise((resolve, reject) => {
           throw new Error(`Stop price ${stopPrice} does not meet minimum order price ${minPrice}.`);
         }
 
-        if (stopPrice * stopSellAmount < minNotional) {
+        const minStopSellAmount = targetSellAmount
+          ? Math.min(targetSellAmount, stopSellAmount - targetSellAmount)
+          : stopSellAmount;
+        if (stopPrice * minStopSellAmount < minNotional) {
           throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
         }
 
@@ -283,7 +291,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
             throw new Error(`Stop limit price ${stopLimitPrice} does not meet minimum order price ${minPrice}.`);
           }
 
-          if (stopLimitPrice * stopSellAmount < minNotional) {
+          if (stopLimitPrice * minStopSellAmount < minNotional) {
             throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
           }
         } else {
@@ -291,7 +299,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
           const currentPrice = Object.values(prices)[0];
           const { multiplierDown } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
           const minPercentPrice = binance.roundTicks(currentPrice * multiplierDown, tickSize);
-          const minNotionalPrice = binance.roundTicks(minNotional / stopSellAmount, tickSize);
+          const minNotionalPrice = binance.roundTicks(minNotional / minStopSellAmount, tickSize);
 
           stopLimitPrice = Math.max(minPercentPrice, minNotionalPrice);
 
@@ -310,17 +318,6 @@ const binanceOco = options => new Promise((resolve, reject) => {
 
         if (targetPrice * targetSellAmount < minNotional) {
           throw new Error(`Target order does not meet minimum order value ${minNotional}.`);
-        }
-
-        const remainingAmount = amount - targetSellAmount;
-        if (remainingAmount && stopPrice) {
-          if (remainingAmount < minQty) {
-            throw new Error(`Stop amount after scale out (${remainingAmount}) will not meet minimum order amount ${minQty}.`);
-          }
-
-          if (stopPrice * remainingAmount < minNotional) {
-            throw new Error(`Stop order after scale out will not meet minimum order value ${minNotional}.`);
-          }
         }
       }
 
