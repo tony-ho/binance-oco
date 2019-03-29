@@ -27,8 +27,8 @@ const binanceOco = options => new Promise((resolve, reject) => {
 
   const calculateSellAmount = (commissionAsset, sellAmount) => ((commissionAsset === 'BNB' && !nonBnbFees) ? sellAmount : (sellAmount * (1 - NON_BNB_TRADING_FEE)));
 
-  let stopSellAmount = amount;
-  let targetSellAmount = scaleOutAmount || amount;
+  let stopSellAmount;
+  let targetSellAmount;
 
   const calculateStopAndTargetAmounts = (commissionAsset) => {
     stopSellAmount = calculateSellAmount(commissionAsset, stopSellAmount);
@@ -229,6 +229,9 @@ const binanceOco = options => new Promise((resolve, reject) => {
           throw new Error(`Scale out amount ${scaleOutAmount} does not meet minimum order amount ${minQty}.`);
         }
       }
+
+      stopSellAmount = amount;
+      targetSellAmount = scaleOutAmount || amount;
 
       if (buyPrice) {
         buyPrice = binance.roundTicks(buyPrice, tickSize);
