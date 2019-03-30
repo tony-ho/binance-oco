@@ -112,8 +112,6 @@ const binanceOco = options => new Promise((resolve, reject) => {
         if (targetSellAmount < stopSellAmount) {
           await placeStopOrderAsync(stopSellAmount - targetSellAmount);
           stopSellAmount = targetSellAmount;
-          targetOrderId = await placeTargetOrderAsync(targetSellAmount);
-          return targetOrderId;
         }
 
         stopOrderId = await placeStopOrderAsync(stopSellAmount);
