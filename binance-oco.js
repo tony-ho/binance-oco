@@ -84,11 +84,12 @@ const binanceOco = options => new Promise((resolve, reject) => {
 
   const isOrderFilled = (data) => {
     const {
-      s: symbol, p: price, q: quantity, S: side, o: orderType, i: orderId, X: orderStatus,
+      s: symbol, L: lastExecutedPrice, l: lastExecutedQuantity, z: filledQuantity, S: side,
+      o: orderType, i: orderId, X: orderStatus,
     } = data;
 
     debug(`${symbol} ${side} ${orderType} ORDER #${orderId} (${orderStatus})`);
-    debug(`..price: ${price}, quantity: ${quantity}`);
+    debug(`..price: ${lastExecutedPrice}, quantity: ${lastExecutedQuantity}, filled quantity: ${filledQuantity}`);
 
     if (orderStatus === 'NEW' || orderStatus === 'PARTIALLY_FILLED') {
       return false;
