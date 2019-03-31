@@ -276,7 +276,7 @@ const binanceOco = options => new Promise((resolve, reject) => {
           throw new Error(`Stop price ${stopPrice} does not meet minimum order price ${minPrice}.`);
         }
 
-        const minStopSellAmount = targetSellAmount
+        const minStopSellAmount = stopSellAmount - targetSellAmount
           ? Math.min(targetSellAmount, stopSellAmount - targetSellAmount)
           : stopSellAmount;
         if (stopPrice * minStopSellAmount < minNotional) {
