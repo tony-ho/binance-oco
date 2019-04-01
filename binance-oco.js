@@ -1,7 +1,43 @@
 const debug = require('debug')('binance-oco');
+const Joi = require('joi');
 const Binance = require('./lib/node-binance-api-async');
 
+const schema = Joi.object().keys({
+  pair: Joi.string().uppercase().required(),
+  amount: Joi.number().positive().required(),
+  buyPrice: Joi.number().min(0),
+  buyLimitPrice: Joi.number().positive(),
+  cancelPrice: Joi.number().positive(),
+  stopPrice: Joi.number().positive()
+    .when('buyPrice', {
+      is: Joi.number().greater(0).required(),
+      then: Joi.number().less(Joi.ref('buyPrice')),
+    }),
+  stopLimitPrice: Joi.number().positive(),
+  targetPrice: Joi.number().positive()
+    .when('stopPrice', {
+      is: Joi.required(),
+      then: Joi.number().greater(Joi.ref('stopPrice')),
+    })
+    .when('buyPrice', {
+      is: Joi.required(),
+      then: Joi.number().greater(Joi.ref('buyPrice')),
+    }),
+  scaleOutAmount: Joi.number().less(Joi.ref('amount')).positive(),
+  nonBnbFees: Joi.boolean(),
+}).or('buyPrice', 'stopPrice', 'targetPrice')
+  .with('buyLimitPrice', 'buyPrice')
+  .with('cancelPrice', 'buyPrice')
+  .with('stopLimitPrice', 'stopPrice')
+  .with('scaleOutAmount', 'targetPrice');
+
 const binanceOco = options => new Promise((resolve, reject) => {
+  const result = Joi.validate(options, schema);
+  if (result.error !== null) {
+    reject(result.error);
+    return;
+  }
+
   const {
     pair,
     cancelPrice,
