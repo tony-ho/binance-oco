@@ -332,7 +332,7 @@ const binanceOco = async (options) => {
       const minPercentPrice = binance.roundTicks(currentPrice * multiplierDown, tickSize);
       const minNotionalPrice = binance.roundTicks(minNotional / minStopSellAmount, tickSize);
 
-      stopLimitPrice = Math.max(minPercentPrice, minNotionalPrice);
+      stopLimitPrice = Math.max(minPrice, minPercentPrice, minNotionalPrice);
 
       const { quotePrecision } = symbolData;
       stopLimitPrice = (parseFloat(stopLimitPrice) + parseFloat(tickSize))
