@@ -58,18 +58,6 @@ const binanceOco = async (options) => {
     }
   };
 
-  const NON_BNB_TRADING_FEE = 0.001;
-
-  const calculateSellAmount = (commissionAsset, sellAmount) => ((commissionAsset === 'BNB' && !nonBnbFees) ? sellAmount : (sellAmount * (1 - NON_BNB_TRADING_FEE)));
-
-  let stopSellAmount;
-  let targetSellAmount;
-
-  const calculateStopAndTargetAmounts = (commissionAsset) => {
-    stopSellAmount = calculateSellAmount(commissionAsset, stopSellAmount);
-    targetSellAmount = calculateSellAmount(commissionAsset, targetSellAmount);
-  };
-
   let isCancelling = false;
 
   const cancelOrderAsync = async (symbol, orderId) => {
@@ -133,6 +121,9 @@ const binanceOco = async (options) => {
 
     return true;
   };
+
+  let stopSellAmount;
+  let targetSellAmount;
 
   const waitForSellOrderFill = sellOrderId => new Promise((resolve, reject) => {
     let stopOrderId = sellOrderId;
@@ -209,11 +200,7 @@ const binanceOco = async (options) => {
         try {
           const { i: orderId } = data;
           if (orderId === buyOrderId && isOrderFilled(data)) {
-            if (stopPrice || targetPrice) {
-              const { N: commissionAsset } = data;
-              calculateStopAndTargetAmounts(commissionAsset);
-            }
-            resolve();
+            resolve(data.N);
           }
         } catch (err) {
           reject(err);
@@ -222,13 +209,27 @@ const binanceOco = async (options) => {
 
       binance.orderStatusAsync(pair, buyOrderId).then((response) => {
         if (response.status === 'FILLED') {
-          resolve();
+          // Binance API doesn't provide commission asset information; default to BNB
+          resolve('BNB');
         }
       });
     } catch (err) {
       reject(err);
     }
   });
+
+  const adjustSellAmountsForCommission = async (commissionAsset, stepSize) => {
+    if (commissionAsset !== 'BNB' || nonBnbFees) {
+      try {
+        const tradeFee = (await binance.tradeFeeAsync()).tradeFee.find(ei => ei.symbol === pair);
+        stopSellAmount = binance.roundStep(stopSellAmount * (1 - tradeFee.maker), stepSize);
+        targetSellAmount = binance.roundStep(targetSellAmount * (1 - tradeFee.maker), stepSize);
+      } catch (err) {
+        debug(`Could not pull trade fee for ${pair}: ${err.body}`);
+        throw new Error(err.body);
+      }
+    }
+  };
 
   await binance.optionsAsync({
     APIKEY: process.env.APIKEY,
@@ -377,10 +378,16 @@ const binanceOco = async (options) => {
     debug('Buy response: %o', response);
     debug(`order id: ${response.orderId}`);
 
+    let commissionAsset;
     if (response.status !== 'FILLED') {
-      await waitForBuyOrderFill(response.orderId).finally(disconnect);
-    } else if (stopPrice || targetPrice) {
-      calculateStopAndTargetAmounts(response.fills[0].commissionAsset);
+      commissionAsset = await waitForBuyOrderFill(response.orderId).finally(disconnect);
+    } else {
+      // eslint-disable-next-line prefer-destructuring
+      commissionAsset = response.fills[0].commissionAsset;
+    }
+
+    if (stopPrice || targetPrice) {
+      await adjustSellAmountsForCommission(commissionAsset, stepSize);
     }
   }
 
