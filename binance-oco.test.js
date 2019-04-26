@@ -11,16 +11,50 @@ const mockBuy = jest.fn(() => ({
 const mockCancel = jest.fn(() => ({
   orderId: '1',
 }));
-const mockExchangeInfo = jest.fn(() => ({
+const bnbbtcExchangeInfo = jest.fn(() => ({
   symbols: [{
     symbol: 'BNBBTC',
+    status: 'TRADING',
+    baseAsset: 'BNB',
+    baseAssetPrecision: 8,
     quoteAsset: 'BTC',
-    filters: [
-      { filterType: 'PRICE_FILTER', minPrice: 0.00000010, tickSize: 0.00000010 },
-      { filterType: 'LOT_SIZE', minQty: 0.01000000, stepSize: 0.01000000 },
-      { filterType: 'PERCENT_PRICE', multiplierDown: 0.01, multiplierUp: 10 },
-      { filterType: 'MIN_NOTIONAL', minNotional: 0.00100000 },
-    ],
+    quotePrecision: 8,
+    orderTypes: ['LIMIT', 'LIMIT_MAKER', 'MARKET', 'STOP_LOSS_LIMIT', 'TAKE_PROFIT_LIMIT'],
+    icebergAllowed: true,
+    isSpotTradingAllowed: true,
+    isMarginTradingAllowed: true,
+    filters: [{
+      filterType: 'PRICE_FILTER', minPrice: '0.00000000', maxPrice: '0.00000000', tickSize: '0.00000010',
+    }, {
+      filterType: 'PERCENT_PRICE', multiplierUp: '10', multiplierDown: '0.1', avgPriceMins: 5,
+    }, {
+      filterType: 'LOT_SIZE', minQty: '0.01000000', maxQty: '90000000.00000000', stepSize: '0.01000000',
+    }, {
+      filterType: 'MIN_NOTIONAL', minNotional: '0.00100000', applyToMarket: true, avgPriceMins: 5,
+    }, { filterType: 'ICEBERG_PARTS', limit: 10 }, { filterType: 'MAX_NUM_ALGO_ORDERS', maxNumAlgoOrders: 5 }],
+  }],
+}));
+const btcusdtExchangeInfo = jest.fn(() => ({
+  symbols: [{
+    symbol: 'BTCUSDT',
+    status: 'TRADING',
+    baseAsset: 'BTC',
+    baseAssetPrecision: 8,
+    quoteAsset: 'USDT',
+    quotePrecision: 8,
+    orderTypes: ['LIMIT', 'LIMIT_MAKER', 'MARKET', 'STOP_LOSS_LIMIT', 'TAKE_PROFIT_LIMIT'],
+    icebergAllowed: true,
+    isSpotTradingAllowed: true,
+    isMarginTradingAllowed: true,
+    filters: [{
+      filterType: 'PRICE_FILTER', minPrice: '0.01000000', maxPrice: '10000000.00000000', tickSize: '0.01000000',
+    }, {
+      filterType: 'PERCENT_PRICE', multiplierUp: '10', multiplierDown: '0.1', avgPriceMins: 5,
+    }, {
+      filterType: 'LOT_SIZE', minQty: '0.00000100', maxQty: '10000000.00000000', stepSize: '0.00000100',
+    }, {
+      filterType: 'MIN_NOTIONAL', minNotional: '10.00000000', applyToMarket: true, avgPriceMins: 5,
+    }, { filterType: 'ICEBERG_PARTS', limit: 10 }, { filterType: 'MAX_NUM_ALGO_ORDERS', maxNumAlgoOrders: 5 }],
   }],
 }));
 const mockMarketBuy = jest.fn(() => ({
@@ -203,7 +237,7 @@ describe('trading rules validation', () => {
     binance.mockImplementation(() => ({
       avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
       balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
-      exchangeInfoAsync: mockExchangeInfo,
+      exchangeInfoAsync: bnbbtcExchangeInfo,
       optionsAsync: jest.fn(),
       roundStep: jest.fn(amount => amount),
       roundTicks: jest.fn(price => price),
@@ -232,11 +266,20 @@ describe('trading rules validation', () => {
   });
 
   test('minimum stop price not met', async () => {
+    binance.mockImplementation(() => ({
+      avgPriceAsync: jest.fn(() => ({ BTCUSDT: '5000' })),
+      balanceAsync: jest.fn(() => ({ USDT: { available: '5000' } })),
+      exchangeInfoAsync: btcusdtExchangeInfo,
+      optionsAsync: jest.fn(),
+      roundStep: jest.fn(amount => amount),
+      roundTicks: jest.fn(price => price),
+    }));
+
     await expect(binanceOco({
-      pair: 'BNBBTC',
+      pair: 'BTCUSDT',
       amount: 1,
-      buyPrice: 0.002,
-      stopPrice: 0.00000001,
+      buyPrice: 5000,
+      stopPrice: 0.001,
     })).rejects.toThrow('does not meet minimum order price');
   });
 
@@ -250,12 +293,21 @@ describe('trading rules validation', () => {
   });
 
   test('minimum stop limit price not met', async () => {
+    binance.mockImplementation(() => ({
+      avgPriceAsync: jest.fn(() => ({ BTCUSDT: '5000' })),
+      balanceAsync: jest.fn(() => ({ USDT: { available: '5000' } })),
+      exchangeInfoAsync: btcusdtExchangeInfo,
+      optionsAsync: jest.fn(),
+      roundStep: jest.fn(amount => amount),
+      roundTicks: jest.fn(price => price),
+    }));
+
     await expect(binanceOco({
-      pair: 'BNBBTC',
+      pair: 'BTCUSDT',
       amount: 1,
-      buyPrice: 0.002,
-      stopPrice: 0.001,
-      stopLimitPrice: 0.00000001,
+      buyPrice: 5000,
+      stopPrice: 4000,
+      stopLimitPrice: 0.001,
     })).rejects.toThrow('does not meet minimum order price');
   });
 
@@ -288,7 +340,7 @@ describe('orders', () => {
         balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
         buyAsync: mockBuy,
         cancelAsync: mockCancel,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         marketBuyAsync: mockMarketBuy,
         optionsAsync: jest.fn(),
         pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
@@ -353,7 +405,7 @@ describe('orders', () => {
         avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
         buyAsync: mockBuy,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         orderStatusAsync: mockOrderStatus,
         pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
@@ -393,7 +445,7 @@ describe('orders', () => {
         balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
         buyAsync: mockBuy,
         cancelAsync: mockCancel,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         orderStatusAsync: jest.fn(() => Promise.resolve({ status: 'NEW' })),
         pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
@@ -423,7 +475,7 @@ describe('orders', () => {
         avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
         buyAsync: mockBuy,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         roundStep: jest.fn(amount => amount),
@@ -455,7 +507,7 @@ describe('orders', () => {
     beforeEach(() => {
       binance.mockImplementation(() => ({
         avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         roundStep: jest.fn(amount => amount),
         roundTicks: jest.fn(price => price),
@@ -532,7 +584,7 @@ describe('orders', () => {
 
       binance.mockImplementation(() => ({
         avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         orderStatusAsync: mockOrderStatus,
         roundStep: jest.fn(amount => amount),
@@ -560,7 +612,7 @@ describe('orders', () => {
       binance.mockImplementation(() => ({
         avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         cancelAsync: mockCancel,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         roundStep: jest.fn(amount => amount),
         roundTicks: jest.fn(price => price),
@@ -597,7 +649,7 @@ describe('orders', () => {
         balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
         buyAsync: mockBuy,
         cancelAsync: mockCancel,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         sellAsync: mockSell,
@@ -657,7 +709,7 @@ describe('orders', () => {
         avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
         buyAsync: mockBuy,
-        exchangeInfoAsync: mockExchangeInfo,
+        exchangeInfoAsync: bnbbtcExchangeInfo,
         optionsAsync: jest.fn(),
         pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
         sellAsync: mockSell,
@@ -697,23 +749,12 @@ describe('orders', () => {
 
     test('sell amount adjusted when non BNB commission asset in buy response', async () => {
       binance.mockImplementation(() => ({
-        avgPriceAsync: jest.fn(() => ({ XRPBTC: '0.002' })),
-        exchangeInfoAsync: jest.fn(() => ({
-          symbols: [{
-            symbol: 'XRPBTC',
-            quoteAsset: 'BTC',
-            filters: [
-              { filterType: 'PRICE_FILTER', minPrice: 0.00000010, tickSize: 0.00000010 },
-              { filterType: 'LOT_SIZE', minQty: 0.01000000, stepSize: 0.01000000 },
-              { filterType: 'PERCENT_PRICE', multiplierDown: 0.01, multiplierUp: 10 },
-              { filterType: 'MIN_NOTIONAL', minNotional: 0.00100000 },
-            ],
-          }],
-        })),
+        avgPriceAsync: jest.fn(() => ({ BTCUSDT: '5000' })),
+        exchangeInfoAsync: btcusdtExchangeInfo,
         marketBuyAsync: jest.fn(() => ({
           orderId: '1',
           status: 'FILLED',
-          fills: [{ commissionAsset: 'XRP' }],
+          fills: [{ commissionAsset: 'USDT' }],
         })),
         optionsAsync: jest.fn(),
         sellAsync: mockSell,
@@ -721,7 +762,7 @@ describe('orders', () => {
         roundTicks: jest.fn(price => price),
         tradeFeeAsync: jest.fn(() => ({
           tradeFee: [{
-            symbol: 'XRPBTC',
+            symbol: 'BTCUSDT',
             maker: 0.001,
             taker: 0.001,
           }],
@@ -729,39 +770,28 @@ describe('orders', () => {
       }));
 
       await expect(binanceOco({
-        pair: 'XRPBTC',
+        pair: 'BTCUSDT',
         amount: 1,
         buyPrice: 0,
-        stopPrice: 0.001,
+        stopPrice: 4000,
       })).resolves.toBe();
-      expect(mockSell).toBeCalledWith('XRPBTC', 0.999, expect.anything(), { newOrderRespType: 'FULL', stopPrice: 0.001, type: 'STOP_LOSS_LIMIT' });
+      expect(mockSell).toBeCalledWith('BTCUSDT', 0.999, expect.anything(), expect.anything());
     });
 
     test('sell amount adjusted when non BNB commission asset in execution update', async () => {
       binance.mockImplementation(() => ({
-        avgPriceAsync: jest.fn(() => ({ XRPBTC: '0.002' })),
-        balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
+        avgPriceAsync: jest.fn(() => ({ BTCUSDT: '5000' })),
+        balanceAsync: jest.fn(() => ({ USDT: { available: '5000' } })),
         buyAsync: mockBuy,
-        exchangeInfoAsync: jest.fn(() => ({
-          symbols: [{
-            symbol: 'XRPBTC',
-            quoteAsset: 'BTC',
-            filters: [
-              { filterType: 'PRICE_FILTER', minPrice: 0.00000010, tickSize: 0.00000010 },
-              { filterType: 'LOT_SIZE', minQty: 0.01000000, stepSize: 0.01000000 },
-              { filterType: 'PERCENT_PRICE', multiplierDown: 0.01, multiplierUp: 10 },
-              { filterType: 'MIN_NOTIONAL', minNotional: 0.00100000 },
-            ],
-          }],
-        })),
+        exchangeInfoAsync: btcusdtExchangeInfo,
         optionsAsync: jest.fn(),
-        pricesAsync: jest.fn(() => ({ XRPBTC: '0.002' })),
+        pricesAsync: jest.fn(() => ({ BTCUSDT: '5000' })),
         sellAsync: mockSell,
         roundStep: jest.fn(amount => amount),
         roundTicks: jest.fn(price => price),
         tradeFeeAsync: jest.fn(() => ({
           tradeFee: [{
-            symbol: 'XRPBTC',
+            symbol: 'BTCUSDT',
             maker: 0.001,
             taker: 0.001,
           }],
@@ -773,7 +803,7 @@ describe('orders', () => {
           userData: jest.fn((_cb, cb) => {
             cb({
               i: '1',
-              N: 'XRP',
+              N: 'BTC',
               X: 'FILLED',
             });
           }),
@@ -781,13 +811,12 @@ describe('orders', () => {
       }));
 
       await expect(binanceOco({
-        pair: 'XRPBTC',
+        pair: 'BTCUSDT',
         amount: 1,
-        buyPrice: 0.002,
-        stopPrice: 0.001,
+        buyPrice: 5000,
+        stopPrice: 4000,
       })).resolves.toBe();
-      expect(mockBuy).toBeCalled();
-      expect(mockSell).toBeCalledWith('XRPBTC', 0.999, expect.anything(), expect.anything());
+      expect(mockSell).toBeCalledWith('BTCUSDT', 0.999, expect.anything(), expect.anything());
     });
 
     test('buy and one-cancels-the-other order: stop filled', async () => {
@@ -825,7 +854,7 @@ describe('orders', () => {
           balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
           buyAsync: mockBuy,
           cancelAsync: mockCancel,
-          exchangeInfoAsync: mockExchangeInfo,
+          exchangeInfoAsync: bnbbtcExchangeInfo,
           optionsAsync: jest.fn(),
           pricesAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
           sellAsync: mockSell,
