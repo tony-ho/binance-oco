@@ -1,5 +1,6 @@
 const debug = require('debug')('binance-oco');
 const Joi = require('joi');
+const BigNumber = require('bignumber.js');
 const Binance = require('./lib/node-binance-api-async');
 
 const schema = Joi.object().keys({
@@ -134,11 +135,12 @@ const binanceOco = async (options) => {
         try {
           const { s: symbol, p: price } = trades;
           debug(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
-          if (stopOrderId && !targetOrderId && price >= targetPrice && !isCancelling) {
+          if (stopOrderId && !targetOrderId && BigNumber(price).gte(targetPrice) && !isCancelling) {
             await cancelOrderAsync(symbol, stopOrderId);
             stopOrderId = 0;
             targetOrderId = await placeTargetOrderAsync(targetSellAmount);
-          } else if (targetOrderId && !stopOrderId && price <= stopPrice && !isCancelling) {
+          } else if (targetOrderId && !stopOrderId
+            && BigNumber(price).lte(stopPrice) && !isCancelling) {
             await cancelOrderAsync(symbol, targetOrderId);
             targetOrderId = 0;
             stopOrderId = await placeStopOrderAsync(stopSellAmount);
@@ -236,15 +238,15 @@ const binanceOco = async (options) => {
     const { minPrice } = filters.find(eis => eis.filterType === 'PRICE_FILTER');
     const { minNotional } = filters.find(eis => eis.filterType === 'MIN_NOTIONAL');
 
-    if (quantity < minQty) {
+    if (BigNumber(quantity).lt(minQty)) {
       throw new Error(`${quantity} does not meet minimum order amount ${minQty}.`);
     }
 
-    if (price < minPrice) {
+    if (BigNumber(price).lt(minPrice)) {
       throw new Error(`${price} does not meet minimum order price ${minPrice}.`);
     }
 
-    if (price * quantity < minNotional) {
+    if (BigNumber(price).times(quantity).lt(minNotional)) {
       throw new Error(`${quantity} @ ${price} does not meet minimum order value ${minNotional}.`);
     }
   };
@@ -284,7 +286,7 @@ const binanceOco = async (options) => {
       const balances = await binance.balanceAsync();
       const { quoteAsset } = symbolData;
       const { available } = balances[quoteAsset];
-      const maxAvailablePrice = binance.roundTicks(available / amount, tickSize);
+      const maxAvailablePrice = binance.roundTicks(BigNumber(available).div(amount), tickSize);
 
       const prices = await binance.avgPriceAsync(pair);
       const currentPrice = Object.values(prices)[0];
@@ -294,8 +296,7 @@ const binanceOco = async (options) => {
       buyLimitPrice = Math.min(maxAvailablePrice, maxPercentPrice);
 
       const { quotePrecision } = symbolData;
-      buyLimitPrice = (parseFloat(buyLimitPrice) - parseFloat(tickSize))
-        .toFixed(quotePrecision);
+      buyLimitPrice = BigNumber(buyLimitPrice).minus(tickSize).toFixed(quotePrecision);
     }
   }
 
@@ -325,8 +326,7 @@ const binanceOco = async (options) => {
       stopLimitPrice = Math.max(minPrice, minPercentPrice, minNotionalPrice);
 
       const { quotePrecision } = symbolData;
-      stopLimitPrice = (parseFloat(stopLimitPrice) + parseFloat(tickSize))
-        .toFixed(quotePrecision);
+      stopLimitPrice = BigNumber(stopLimitPrice).plus(tickSize).toFixed(quotePrecision);
     }
   }
 
@@ -337,17 +337,17 @@ const binanceOco = async (options) => {
     }
   }
 
-  if (buyPrice >= 0) {
+  if (BigNumber(buyPrice).gte(0)) {
     let response;
     try {
-      if (buyPrice === 0) {
+      if (BigNumber(buyPrice).isZero()) {
         response = await binance.marketBuyAsync(pair, amount, { type: 'MARKET', newOrderRespType: 'FULL' });
-      } else if (buyPrice > 0) {
+      } else if (BigNumber(buyPrice).gt(0)) {
         const ticker = await binance.pricesAsync(pair);
         const currentPrice = ticker[pair];
         debug(`${pair} price: ${currentPrice}`);
 
-        if (buyPrice > currentPrice) {
+        if (BigNumber(buyPrice).gt(currentPrice)) {
           isStopEntry = true;
           response = await binance.buyAsync(pair, amount, buyLimitPrice || buyPrice, { stopPrice: buyPrice, type: 'STOP_LOSS_LIMIT', newOrderRespType: 'FULL' });
         } else {
