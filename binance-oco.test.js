@@ -201,6 +201,8 @@ describe('options validation', () => {
 describe('trading rules validation', () => {
   beforeEach(() => {
     binance.mockImplementation(() => ({
+      avgPriceAsync: jest.fn(() => ({ BNBBTC: '0.002' })),
+      balanceAsync: jest.fn(() => ({ BTC: { available: '1' } })),
       exchangeInfoAsync: mockExchangeInfo,
       optionsAsync: jest.fn(),
       roundStep: jest.fn(amount => amount),
@@ -213,7 +215,7 @@ describe('trading rules validation', () => {
       pair: 'BNBBTC',
       amount: 0.001,
       buyPrice: 0.001,
-    })).rejects.toThrow('Amount 0.001 does not meet minimum order amount 0.01.');
+    })).rejects.toThrow('does not meet minimum order amount');
   });
 
   test('minimum scale out order amount not met', async () => {
@@ -223,17 +225,18 @@ describe('trading rules validation', () => {
       buyPrice: 0.001,
       targetPrice: 0.002,
       scaleOutAmount: 0.001,
-    })).rejects.toThrow('Scale out amount 0.001 does not meet minimum order amount 0.01.');
+    })).rejects.toThrow('does not meet minimum order amount');
   });
 
   test('minimum remaining order amount not met', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
       amount: 1,
-      buyPrice: 0.001,
-      targetPrice: 0.002,
+      buyPrice: 0.002,
+      stopPrice: 0.001,
+      targetPrice: 0.003,
       scaleOutAmount: 0.999,
-    })).rejects.toThrow('will not meet minimum order amount 0.01.');
+    })).rejects.toThrow('does not meet minimum order amount');
   });
 
   test('minimum buy price not met', async () => {
@@ -249,7 +252,7 @@ describe('trading rules validation', () => {
       pair: 'BNBBTC',
       amount: 0.01,
       buyPrice: 0.01,
-    })).rejects.toThrow('Buy order does not meet minimum order value 0.001.');
+    })).rejects.toThrow('does not meet minimum order value');
   });
 
   test('minimum stop price not met', async () => {
@@ -265,7 +268,7 @@ describe('trading rules validation', () => {
       pair: 'BNBBTC',
       amount: 0.01,
       stopPrice: 0.01,
-    })).rejects.toThrow('Stop order does not meet minimum order value 0.001.');
+    })).rejects.toThrow('does not meet minimum order value');
   });
 
   test('minimum stop limit price not met', async () => {
@@ -283,7 +286,7 @@ describe('trading rules validation', () => {
       amount: 0.01,
       stopPrice: 0.01,
       stopLimitPrice: 0.00000001,
-    })).rejects.toThrow('Stop order does not meet minimum order value 0.001.');
+    })).rejects.toThrow('does not meet minimum order value');
   });
 
   test('minimum target price not met', async () => {
@@ -299,7 +302,7 @@ describe('trading rules validation', () => {
       pair: 'BNBBTC',
       amount: 0.01,
       targetPrice: 0.01,
-    })).rejects.toThrow('Target order does not meet minimum order value 0.001.');
+    })).rejects.toThrow('does not meet minimum order value');
   });
 });
 

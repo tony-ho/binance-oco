@@ -231,6 +231,24 @@ const binanceOco = async (options) => {
     }
   };
 
+  const validateOrderMeetsTradingRules = (filters, quantity, price) => {
+    const { minQty } = filters.find(eis => eis.filterType === 'LOT_SIZE');
+    const { minPrice } = filters.find(eis => eis.filterType === 'PRICE_FILTER');
+    const { minNotional } = filters.find(eis => eis.filterType === 'MIN_NOTIONAL');
+
+    if (quantity < minQty) {
+      throw new Error(`${quantity} does not meet minimum order amount ${minQty}.`);
+    }
+
+    if (price < minPrice) {
+      throw new Error(`${price} does not meet minimum order price ${minPrice}.`);
+    }
+
+    if (price * quantity < minNotional) {
+      throw new Error(`${quantity} @ ${price} does not meet minimum order value ${minNotional}.`);
+    }
+  };
+
   await binance.optionsAsync({
     APIKEY: process.env.APIKEY,
     APISECRET: process.env.APISECRET,
@@ -244,27 +262,14 @@ const binanceOco = async (options) => {
   }
 
   const { filters } = symbolData;
-  const { stepSize, minQty } = filters.find(eis => eis.filterType === 'LOT_SIZE');
+  const { stepSize } = filters.find(eis => eis.filterType === 'LOT_SIZE');
   const { tickSize, minPrice } = filters.find(eis => eis.filterType === 'PRICE_FILTER');
   const { minNotional } = filters.find(eis => eis.filterType === 'MIN_NOTIONAL');
 
   amount = binance.roundStep(amount, stepSize);
 
-  if (amount < minQty) {
-    throw new Error(`Amount ${amount} does not meet minimum order amount ${minQty}.`);
-  }
-
   if (scaleOutAmount) {
     scaleOutAmount = binance.roundStep(scaleOutAmount, stepSize);
-
-    if (scaleOutAmount < minQty) {
-      throw new Error(`Scale out amount ${scaleOutAmount} does not meet minimum order amount ${minQty}.`);
-    }
-
-    const remainingAmount = amount - scaleOutAmount;
-    if (remainingAmount < minQty) {
-      throw new Error(`Stop amount after scale out (${remainingAmount}) will not meet minimum order amount ${minQty}.`);
-    }
   }
 
   stopSellAmount = amount;
@@ -272,17 +277,11 @@ const binanceOco = async (options) => {
 
   if (buyPrice) {
     buyPrice = binance.roundTicks(buyPrice, tickSize);
-
-    if (buyPrice < minPrice) {
-      throw new Error(`Buy price ${buyPrice} does not meet minimum order price ${minPrice}.`);
-    }
-
-    if (buyPrice * amount < minNotional) {
-      throw new Error(`Buy order does not meet minimum order value ${minNotional}.`);
-    }
+    validateOrderMeetsTradingRules(filters, amount, buyPrice);
 
     if (buyLimitPrice) {
       buyLimitPrice = binance.roundTicks(buyLimitPrice, tickSize);
+      validateOrderMeetsTradingRules(filters, amount, buyLimitPrice);
     } else {
       const balances = await binance.balanceAsync();
       const { quoteAsset } = symbolData;
@@ -305,27 +304,15 @@ const binanceOco = async (options) => {
   if (stopPrice) {
     stopPrice = binance.roundTicks(stopPrice, tickSize);
 
-    if (stopPrice < minPrice) {
-      throw new Error(`Stop price ${stopPrice} does not meet minimum order price ${minPrice}.`);
-    }
-
     const minStopSellAmount = stopSellAmount - targetSellAmount
       ? Math.min(targetSellAmount, stopSellAmount - targetSellAmount)
       : stopSellAmount;
-    if (stopPrice * minStopSellAmount < minNotional) {
-      throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
-    }
+
+    validateOrderMeetsTradingRules(filters, minStopSellAmount, stopPrice);
 
     if (stopLimitPrice) {
       stopLimitPrice = binance.roundTicks(stopLimitPrice, tickSize);
-
-      if (stopLimitPrice < minPrice) {
-        throw new Error(`Stop limit price ${stopLimitPrice} does not meet minimum order price ${minPrice}.`);
-      }
-
-      if (stopLimitPrice * minStopSellAmount < minNotional) {
-        throw new Error(`Stop order does not meet minimum order value ${minNotional}.`);
-      }
+      validateOrderMeetsTradingRules(filters, minStopSellAmount, stopLimitPrice);
     } else {
       const prices = await binance.avgPriceAsync(pair);
       const currentPrice = Object.values(prices)[0];
@@ -343,14 +330,7 @@ const binanceOco = async (options) => {
 
   if (targetPrice) {
     targetPrice = binance.roundTicks(targetPrice, tickSize);
-
-    if (targetPrice < minPrice) {
-      throw new Error(`Target price ${targetPrice} does not meet minimum order price ${minPrice}.`);
-    }
-
-    if (targetPrice * targetSellAmount < minNotional) {
-      throw new Error(`Target order does not meet minimum order value ${minNotional}.`);
-    }
+    validateOrderMeetsTradingRules(filters, targetSellAmount, targetPrice);
   }
 
   if (buyPrice >= 0) {
