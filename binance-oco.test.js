@@ -210,14 +210,6 @@ describe('trading rules validation', () => {
     }));
   });
 
-  test('minimum buy order amount not met', async () => {
-    await expect(binanceOco({
-      pair: 'BNBBTC',
-      amount: 0.001,
-      buyPrice: 0.001,
-    })).rejects.toThrow('does not meet minimum order amount');
-  });
-
   test('minimum scale out order amount not met', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
@@ -239,26 +231,11 @@ describe('trading rules validation', () => {
     })).rejects.toThrow('does not meet minimum order amount');
   });
 
-  test('minimum buy price not met', async () => {
-    await expect(binanceOco({
-      pair: 'BNBBTC',
-      amount: 1,
-      buyPrice: 0.00000001,
-    })).rejects.toThrow('does not meet minimum order price');
-  });
-
-  test('minimum buy order value not met', async () => {
-    await expect(binanceOco({
-      pair: 'BNBBTC',
-      amount: 0.01,
-      buyPrice: 0.01,
-    })).rejects.toThrow('does not meet minimum order value');
-  });
-
   test('minimum stop price not met', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
       amount: 1,
+      buyPrice: 0.002,
       stopPrice: 0.00000001,
     })).rejects.toThrow('does not meet minimum order price');
   });
@@ -266,8 +243,9 @@ describe('trading rules validation', () => {
   test('minimum stop order value not met', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
-      amount: 0.01,
-      stopPrice: 0.01,
+      amount: 1,
+      buyPrice: 0.002,
+      stopPrice: 0.0001,
     })).rejects.toThrow('does not meet minimum order value');
   });
 
@@ -275,6 +253,7 @@ describe('trading rules validation', () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
       amount: 1,
+      buyPrice: 0.002,
       stopPrice: 0.001,
       stopLimitPrice: 0.00000001,
     })).rejects.toThrow('does not meet minimum order price');
@@ -283,25 +262,20 @@ describe('trading rules validation', () => {
   test('minimum stop limit order value not met', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
-      amount: 0.01,
-      stopPrice: 0.01,
-      stopLimitPrice: 0.00000001,
-    })).rejects.toThrow('does not meet minimum order value');
-  });
-
-  test('minimum target price not met', async () => {
-    await expect(binanceOco({
-      pair: 'BNBBTC',
       amount: 1,
-      targetPrice: 0.00000001,
-    })).rejects.toThrow('does not meet minimum order price');
+      buyPrice: 0.002,
+      stopPrice: 0.001,
+      stopLimitPrice: 0.0001,
+    })).rejects.toThrow('does not meet minimum order value');
   });
 
   test('minimum target order value not met', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
-      amount: 0.01,
-      targetPrice: 0.01,
+      amount: 1,
+      buyPrice: 0.002,
+      targetPrice: 0.003,
+      scaleOutAmount: 0.1,
     })).rejects.toThrow('does not meet minimum order value');
   });
 });

@@ -277,11 +277,9 @@ const binanceOco = async (options) => {
 
   if (buyPrice) {
     buyPrice = binance.roundTicks(buyPrice, tickSize);
-    validateOrderMeetsTradingRules(filters, amount, buyPrice);
 
     if (buyLimitPrice) {
       buyLimitPrice = binance.roundTicks(buyLimitPrice, tickSize);
-      validateOrderMeetsTradingRules(filters, amount, buyLimitPrice);
     } else {
       const balances = await binance.balanceAsync();
       const { quoteAsset } = symbolData;
@@ -308,11 +306,15 @@ const binanceOco = async (options) => {
       ? Math.min(targetSellAmount, stopSellAmount - targetSellAmount)
       : stopSellAmount;
 
-    validateOrderMeetsTradingRules(filters, minStopSellAmount, stopPrice);
+    if (buyPrice) {
+      validateOrderMeetsTradingRules(filters, minStopSellAmount, stopPrice);
+    }
 
     if (stopLimitPrice) {
       stopLimitPrice = binance.roundTicks(stopLimitPrice, tickSize);
-      validateOrderMeetsTradingRules(filters, minStopSellAmount, stopLimitPrice);
+      if (buyPrice) {
+        validateOrderMeetsTradingRules(filters, minStopSellAmount, stopLimitPrice);
+      }
     } else {
       const prices = await binance.avgPriceAsync(pair);
       const currentPrice = Object.values(prices)[0];
@@ -330,7 +332,9 @@ const binanceOco = async (options) => {
 
   if (targetPrice) {
     targetPrice = binance.roundTicks(targetPrice, tickSize);
-    validateOrderMeetsTradingRules(filters, targetSellAmount, targetPrice);
+    if (buyPrice || stopPrice) {
+      validateOrderMeetsTradingRules(filters, targetSellAmount, targetPrice);
+    }
   }
 
   if (buyPrice >= 0) {
