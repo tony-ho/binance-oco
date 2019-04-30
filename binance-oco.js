@@ -54,20 +54,6 @@ const binanceOco = async (options) => {
     apiSecret: process.env.APISECRET,
   });
 
-  const roundStep = (qty, stepSize) => {
-    if (Number.isInteger(qty)) return qty;
-    const qtyString = qty.toFixed(16);
-    const desiredDecimals = Math.max(stepSize.indexOf('1') - 1, 0);
-    const decimalIndex = qtyString.indexOf('.');
-    return parseFloat(qtyString.slice(0, decimalIndex + desiredDecimals + 1));
-  };
-  const roundTicks = (price, tickSize) => {
-    const formatter = new Intl.NumberFormat('en-US', { style: 'decimal', minimumFractionDigits: 0, maximumFractionDigits: 8 });
-    const precision = formatter.format(tickSize).split('.')[1].length || 0;
-    if (typeof price === 'string') price = parseFloat(price);
-    return price.toFixed(precision);
-  };
-
   let isCancelling = false;
 
   const cancelOrderAsync = async (symbol, orderId) => {
@@ -215,8 +201,8 @@ const binanceOco = async (options) => {
           } else {
             debug(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
 
-            if (((isStopEntry && price <= cancelPrice)
-              || (isLimitEntry && price >= cancelPrice))
+            if (((isStopEntry && BigNumber(price).lte(cancelPrice))
+              || (isLimitEntry && BigNumber(price).gte(cancelPrice)))
               && !isCancelling) {
               await cancelOrderAsync(symbol, buyOrderId);
               reject(new Error(`Order CANCELED. Reason: cancel price ${cancelPrice} hit`));
@@ -253,12 +239,17 @@ const binanceOco = async (options) => {
     }
   });
 
+  const round = (toBeRounded, toNearest) => {
+    const fractionDigits = Math.max(toNearest.indexOf('1') - 1, 0);
+    return BigNumber(toBeRounded).toFixed(fractionDigits, BigNumber.ROUND_DOWN);
+  };
+
   const adjustSellAmountsForCommission = async (commissionAsset, stepSize) => {
     if (commissionAsset !== 'BNB' || nonBnbFees) {
       try {
         const tradeFee = (await binance.tradeFee()).tradeFee.find(ei => ei.symbol === pair);
-        stopSellAmount = roundStep(stopSellAmount * (1 - tradeFee.maker), stepSize);
-        targetSellAmount = roundStep(targetSellAmount * (1 - tradeFee.maker), stepSize);
+        stopSellAmount = round(BigNumber(stopSellAmount).times(1 - tradeFee.maker), stepSize);
+        targetSellAmount = round(BigNumber(targetSellAmount).times(1 - tradeFee.maker), stepSize);
       } catch (err) {
         debug(`Could not pull trade fee for ${pair}: ${err.body}`);
         throw err;
@@ -294,68 +285,65 @@ const binanceOco = async (options) => {
   const { tickSize, minPrice } = filters.find(eis => eis.filterType === 'PRICE_FILTER');
   const { minNotional } = filters.find(eis => eis.filterType === 'MIN_NOTIONAL');
 
-  amount = roundStep(amount, stepSize);
+  amount = round(amount, stepSize);
 
   if (scaleOutAmount) {
-    scaleOutAmount = roundStep(scaleOutAmount, stepSize);
+    scaleOutAmount = round(scaleOutAmount, stepSize);
   }
 
   stopSellAmount = amount;
   targetSellAmount = scaleOutAmount || amount;
 
   if (buyPrice) {
-    buyPrice = roundTicks(buyPrice, tickSize);
+    buyPrice = round(buyPrice, tickSize);
 
     if (buyLimitPrice) {
-      buyLimitPrice = roundTicks(buyLimitPrice, tickSize);
+      buyLimitPrice = round(buyLimitPrice, tickSize);
     } else {
       const accountInfo = await binance.accountInfo();
       const { quoteAsset } = symbolData;
       const available = accountInfo.balances.find(ab => ab.asset === quoteAsset).free;
-      const maxAvailablePrice = roundTicks(BigNumber(available).div(amount), tickSize);
+      const maxAvailablePrice = BigNumber(available).div(amount);
 
       const currentPrice = (await binance.avgPrice({ symbol: pair })).price;
       const { multiplierUp } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
-      const maxPercentPrice = roundTicks(currentPrice * multiplierUp, tickSize);
+      const maxPercentPrice = BigNumber(currentPrice).times(multiplierUp);
 
-      buyLimitPrice = Math.min(maxAvailablePrice, maxPercentPrice);
-
-      const { quotePrecision } = symbolData;
-      buyLimitPrice = BigNumber(buyLimitPrice).minus(tickSize).toFixed(quotePrecision);
+      buyLimitPrice = round(BigNumber.min(maxAvailablePrice, maxPercentPrice)
+        .minus(tickSize), tickSize);
     }
   }
 
   if (stopPrice) {
-    stopPrice = roundTicks(stopPrice, tickSize);
+    stopPrice = round(stopPrice, tickSize);
 
-    const minStopSellAmount = stopSellAmount - targetSellAmount
-      ? Math.min(targetSellAmount, stopSellAmount - targetSellAmount)
-      : stopSellAmount;
+    const minStopSellAmount = BigNumber(stopSellAmount).minus(targetSellAmount).isZero()
+      ? stopSellAmount
+      : round(BigNumber.min(targetSellAmount, BigNumber(stopSellAmount).minus(targetSellAmount)),
+        stepSize);
 
     if (buyPrice) {
       validateOrderMeetsTradingRules(filters, minStopSellAmount, stopPrice);
     }
 
     if (stopLimitPrice) {
-      stopLimitPrice = roundTicks(stopLimitPrice, tickSize);
+      stopLimitPrice = round(stopLimitPrice, tickSize);
       if (buyPrice) {
         validateOrderMeetsTradingRules(filters, minStopSellAmount, stopLimitPrice);
       }
     } else {
       const currentPrice = (await binance.avgPrice({ symbol: pair })).price;
       const { multiplierDown } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
-      const minPercentPrice = roundTicks(currentPrice * multiplierDown, tickSize);
-      const minNotionalPrice = roundTicks(minNotional / minStopSellAmount, tickSize);
+      const minPercentPrice = BigNumber(currentPrice).times(multiplierDown);
+      const minNotionalPrice = BigNumber(minNotional).div(minStopSellAmount);
 
-      stopLimitPrice = Math.max(minPrice, minPercentPrice, minNotionalPrice);
-
-      const { quotePrecision } = symbolData;
-      stopLimitPrice = BigNumber(stopLimitPrice).plus(tickSize).toFixed(quotePrecision);
+      stopLimitPrice = round(BigNumber.max(minPrice, minPercentPrice, minNotionalPrice)
+        .plus(tickSize), tickSize);
     }
   }
 
   if (targetPrice) {
-    targetPrice = roundTicks(targetPrice, tickSize);
+    targetPrice = round(targetPrice, tickSize);
     if (buyPrice || stopPrice) {
       validateOrderMeetsTradingRules(filters, targetSellAmount, targetPrice);
     }
@@ -421,8 +409,9 @@ const binanceOco = async (options) => {
   }
 
   if (stopPrice && targetPrice) {
-    if (targetSellAmount < stopSellAmount) {
-      await placeStopOrderAsync(stopSellAmount - targetSellAmount);
+    if (BigNumber(targetSellAmount).lt(stopSellAmount)) {
+      await placeStopOrderAsync(round(BigNumber(stopSellAmount)
+        .minus(targetSellAmount), stepSize));
       stopSellAmount = targetSellAmount;
     }
 
