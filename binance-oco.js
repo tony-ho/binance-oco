@@ -257,24 +257,6 @@ const binanceOco = async (options) => {
     }
   };
 
-  const validateOrderMeetsTradingRules = (filters, quantity, price) => {
-    const { minQty } = filters.find(eis => eis.filterType === 'LOT_SIZE');
-    const { minPrice } = filters.find(eis => eis.filterType === 'PRICE_FILTER');
-    const { minNotional } = filters.find(eis => eis.filterType === 'MIN_NOTIONAL');
-
-    if (BigNumber(quantity).lt(minQty)) {
-      throw new Error(`${quantity} does not meet minimum order amount ${minQty}.`);
-    }
-
-    if (BigNumber(price).lt(minPrice)) {
-      throw new Error(`${price} does not meet minimum order price ${minPrice}.`);
-    }
-
-    if (BigNumber(price).times(quantity).lt(minNotional)) {
-      throw new Error(`${quantity} @ ${price} does not meet minimum order value ${minNotional}.`);
-    }
-  };
-
   const symbolData = (await binance.exchangeInfo()).symbols.find(ei => ei.symbol === pair);
   if (!symbolData) {
     throw new Error(`Could not pull exchange info for ${pair}`);
@@ -322,15 +304,8 @@ const binanceOco = async (options) => {
       : round(BigNumber.min(targetSellAmount, BigNumber(stopSellAmount).minus(targetSellAmount)),
         stepSize);
 
-    if (buyPrice) {
-      validateOrderMeetsTradingRules(filters, minStopSellAmount, stopPrice);
-    }
-
     if (stopLimitPrice) {
       stopLimitPrice = round(stopLimitPrice, tickSize);
-      if (buyPrice) {
-        validateOrderMeetsTradingRules(filters, minStopSellAmount, stopLimitPrice);
-      }
     } else {
       const currentPrice = (await binance.avgPrice({ symbol: pair })).price;
       const { multiplierDown } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
@@ -340,12 +315,35 @@ const binanceOco = async (options) => {
       stopLimitPrice = round(BigNumber.max(minPrice, minPercentPrice, minNotionalPrice)
         .plus(tickSize), tickSize);
     }
+
+    if (buyPrice || targetPrice) {
+      const order = {
+        symbol: pair,
+        side: 'SELL',
+        quantity: minStopSellAmount,
+        price: stopLimitPrice,
+        stopPrice,
+        type: 'STOP_LOSS_LIMIT',
+      };
+      debug('Validating stop order: %o', order);
+      await binance.orderTest(order);
+      debug('Stop order valid');
+    }
   }
 
   if (targetPrice) {
     targetPrice = round(targetPrice, tickSize);
     if (buyPrice || stopPrice) {
-      validateOrderMeetsTradingRules(filters, targetSellAmount, targetPrice);
+      const order = {
+        symbol: pair,
+        side: 'SELL',
+        quantity: targetSellAmount,
+        price: targetPrice,
+        type: 'LIMIT',
+      };
+      debug('Validating target order: %o', order);
+      await binance.orderTest(order);
+      debug('Target order valid');
     }
   }
 

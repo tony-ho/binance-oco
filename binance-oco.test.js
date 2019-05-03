@@ -69,6 +69,7 @@ const mockOrder = jest.fn(() => ({
   orderId: '1',
   status: 'NEW',
 }));
+const mockOrderTest = jest.fn();
 
 beforeEach(() => {
   binance.default.mockImplementation(() => ({
@@ -77,6 +78,7 @@ beforeEach(() => {
     cancelOrder: mockCancel,
     exchangeInfo: bnbbtcExchangeInfo,
     order: mockOrder,
+    orderTest: mockOrderTest,
     prices: bnbbtcPrices,
     tradeFee: jest.fn(() => ({
       tradeFee: [{
@@ -264,61 +266,117 @@ describe('options validation', () => {
   });
 });
 
-describe('trading rules validation', () => {
-  beforeEach(() => {
-    binance.default.mockImplementation(() => ({
-      accountInfo: mockAccountInfo,
-      avgPrice: btcusdtAvgPrice,
-      exchangeInfo: btcusdtExchangeInfo,
-    }));
+describe('order validation', () => {
+  test('buy order only is not checked', async () => {
+    await expect(binanceOco({
+      pair: 'BNBBTC',
+      amount: 1,
+      buyPrice: 0,
+    })).resolves.toBe();
+    expect(mockOrderTest).not.toBeCalled();
   });
 
-  test('minimum stop price not met', async () => {
+  test('stop order only is not checked', async () => {
     await expect(binanceOco({
-      pair: 'BTCUSDT',
+      pair: 'BNBBTC',
       amount: 1,
-      buyPrice: 5000,
       stopPrice: 0.001,
-    })).rejects.toThrow('does not meet minimum order price');
+    })).resolves.toBe();
+    expect(mockOrderTest).not.toBeCalled();
   });
 
-  test('minimum stop limit price not met', async () => {
+  test('target order only is not checked', async () => {
     await expect(binanceOco({
-      pair: 'BTCUSDT',
+      pair: 'BNBBTC',
       amount: 1,
-      buyPrice: 5000,
-      stopPrice: 4000,
-      stopLimitPrice: 0.001,
-    })).rejects.toThrow('does not meet minimum order price');
+      targetPrice: 0.003,
+    })).resolves.toBe();
+    expect(mockOrderTest).not.toBeCalled();
   });
 
-  test('minimum stop order value not met', async () => {
+  test('one-cancels-the-other order checks target order', async () => {
     await expect(binanceOco({
-      pair: 'BTCUSDT',
+      pair: 'BNBBTC',
       amount: 1,
-      buyPrice: 5000,
-      stopPrice: 1,
-    })).rejects.toThrow('does not meet minimum order value');
+      stopPrice: 0.001,
+      targetPrice: 0.003,
+    })).resolves.toBe();
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
+    });
   });
 
-  test('minimum stop limit order value not met', async () => {
+  test('one-cancels-the-other order with scale out checks stop and target orders', async () => {
     await expect(binanceOco({
-      pair: 'BTCUSDT',
-      amount: 1,
-      buyPrice: 5000,
-      stopPrice: 4000,
-      stopLimitPrice: 1,
-    })).rejects.toThrow('does not meet minimum order value');
+      pair: 'BNBBTC',
+      amount: 3,
+      stopPrice: 0.001,
+      targetPrice: 0.003,
+      scaleOutAmount: 1,
+    })).resolves.toBe();
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
+    });
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
+    });
   });
 
-  test('minimum target order value not met', async () => {
+  test('buy and stop order checks stop order', async () => {
     await expect(binanceOco({
-      pair: 'BTCUSDT',
+      pair: 'BNBBTC',
       amount: 1,
-      buyPrice: 5000,
-      targetPrice: 6000,
-      scaleOutAmount: 0.001,
-    })).rejects.toThrow('does not meet minimum order value');
+      buyPrice: 0.002,
+      stopPrice: 0.001,
+    })).resolves.toBe();
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
+    });
+  });
+
+  test('buy and target order checks target order', async () => {
+    await expect(binanceOco({
+      pair: 'BNBBTC',
+      amount: 1,
+      buyPrice: 0.002,
+      targetPrice: 0.003,
+    })).resolves.toBe();
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
+    });
+  });
+
+  test('buy and one-cancels-the-other order checks stop and target orders', async () => {
+    await expect(binanceOco({
+      pair: 'BNBBTC',
+      amount: 1,
+      buyPrice: 0.002,
+      stopPrice: 0.001,
+      targetPrice: 0.003,
+    })).resolves.toBe();
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
+    });
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
+    });
+  });
+
+  test('buy and one-cancels-the-other order with scale out checks stop and target orders', async () => {
+    await expect(binanceOco({
+      pair: 'BNBBTC',
+      amount: 3,
+      buyPrice: 0.002,
+      stopPrice: 0.001,
+      targetPrice: 0.003,
+      scaleOutAmount: 1,
+    })).resolves.toBe();
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
+    });
+    expect(mockOrderTest).toBeCalledWith({
+      symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
+    });
   });
 });
 
@@ -377,6 +435,7 @@ describe('orders', () => {
         accountInfo: mockAccountInfo,
         exchangeInfo: bnbbtcExchangeInfo,
         order: mockOrder,
+        orderTest: jest.fn(),
         getOrder: getOrderFilled,
         prices: bnbbtcPrices,
         ws: {
@@ -412,6 +471,7 @@ describe('orders', () => {
         cancelOrder: mockCancel,
         exchangeInfo: bnbbtcExchangeInfo,
         order: mockOrder,
+        orderTest: jest.fn(),
         getOrder: jest.fn(() => Promise.resolve({ status: 'NEW' })),
         prices: bnbbtcPrices,
         ws: {
@@ -437,6 +497,7 @@ describe('orders', () => {
         accountInfo: mockAccountInfo,
         exchangeInfo: bnbbtcExchangeInfo,
         order: mockOrder,
+        orderTest: jest.fn(),
         prices: bnbbtcPrices,
         ws: {
           trades: jest.fn(),
@@ -535,6 +596,7 @@ describe('orders', () => {
         exchangeInfo: bnbbtcExchangeInfo,
         getOrder: getOrderFilled,
         order: mockOrder,
+        orderTest: jest.fn(),
         ws: {
           trades: jest.fn(),
           user: jest.fn(),
@@ -557,6 +619,7 @@ describe('orders', () => {
         cancelOrder: mockCancel,
         exchangeInfo: bnbbtcExchangeInfo,
         order: mockOrder,
+        orderTest: jest.fn(),
         ws: {
           trades: jest.fn(),
           user: jest.fn((cb) => {
@@ -651,6 +714,7 @@ describe('orders', () => {
         avgPrice: btcusdtAvgPrice,
         exchangeInfo: btcusdtExchangeInfo,
         order: orderWithNonBnbCommission,
+        orderTest: jest.fn(),
         prices: btcusdtPrices,
         tradeFee: jest.fn(() => ({
           tradeFee: [{
@@ -678,6 +742,7 @@ describe('orders', () => {
         avgPrice: btcusdtAvgPrice,
         exchangeInfo: btcusdtExchangeInfo,
         order: mockOrder,
+        orderTest: jest.fn(),
         prices: btcusdtPrices,
         tradeFee: jest.fn(() => ({
           tradeFee: [{
@@ -760,6 +825,7 @@ describe('orders', () => {
           cancelOrder: mockCancel,
           exchangeInfo: bnbbtcExchangeInfo,
           order: mockOrder,
+          orderTest: jest.fn(),
           prices: bnbbtcPrices,
           ws: {
             trades: jest.fn((symbol, cb) => {
