@@ -35,7 +35,7 @@ const schema = Joi.object().keys({
 const binanceOco = async (options) => {
   const result = Joi.validate(options, schema);
   if (result.error !== null) {
-    throw new Error(result.error);
+    throw result.error;
   }
 
   const {

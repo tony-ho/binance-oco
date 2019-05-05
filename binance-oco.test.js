@@ -114,21 +114,21 @@ describe('options validation', () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
       buyPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('amount');
   });
 
   test('fails without pair', async () => {
     await expect(binanceOco({
       amount: 1,
       buyPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('pair');
   });
 
   test('fails without buy, stop, or target price', async () => {
     await expect(binanceOco({
       pair: 'BNBBTC',
       amount: 1,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('buyPrice');
   });
 
   test('fails with buy limit price without buy price', async () => {
@@ -137,7 +137,7 @@ describe('options validation', () => {
       amount: 1,
       stopPrice: 0.001,
       buyLimitPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('buyLimitPrice');
   });
 
   test('fails with cancel price without buy price', async () => {
@@ -146,7 +146,7 @@ describe('options validation', () => {
       amount: 1,
       stopPrice: 0.001,
       cancelPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('cancelPrice');
   });
 
   test('fails with stop limit price without stop price', async () => {
@@ -155,7 +155,7 @@ describe('options validation', () => {
       amount: 1,
       buyPrice: 0.001,
       stopLimitPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('stopLimitPrice');
   });
 
   test('fails with scale out amount without target price', async () => {
@@ -164,7 +164,7 @@ describe('options validation', () => {
       amount: 1,
       buyPrice: 0.001,
       scaleOutAmount: 0.5,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('scaleOutAmount');
   });
 
   test('fails with zero amount', async () => {
@@ -172,7 +172,7 @@ describe('options validation', () => {
       pair: 'BNBBTC',
       amount: 0,
       buyPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('amount');
   });
 
   test('fails with zero buy limit price', async () => {
@@ -181,7 +181,7 @@ describe('options validation', () => {
       amount: 1,
       buyPrice: 0.001,
       buyLimitPrice: 0,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('buyLimitPrice');
   });
 
   test('fails with zero cancel price', async () => {
@@ -190,7 +190,7 @@ describe('options validation', () => {
       amount: 1,
       buyPrice: 0.001,
       cancelPrice: 0,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('cancelPrice');
   });
 
   test('fails with zero stop price', async () => {
@@ -198,7 +198,7 @@ describe('options validation', () => {
       pair: 'BNBBTC',
       amount: 1,
       stopPrice: 0,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('stopPrice');
   });
 
   test('fails with zero stop limit price', async () => {
@@ -207,7 +207,7 @@ describe('options validation', () => {
       amount: 1,
       stopPrice: 0.001,
       stopLimitPrice: 0,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('stopLimitPrice');
   });
 
   test('fails with zero target price', async () => {
@@ -215,7 +215,7 @@ describe('options validation', () => {
       pair: 'BNBBTC',
       amount: 1,
       targetPrice: 0,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('targetPrice');
   });
 
   test('fails with zero scale out amount', async () => {
@@ -224,7 +224,7 @@ describe('options validation', () => {
       amount: 1,
       targetPrice: 0.001,
       scaleOutAmount: 0,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('scaleOutAmount');
   });
 
   test('fails with stop price above buy price', async () => {
@@ -233,7 +233,7 @@ describe('options validation', () => {
       amount: 1,
       buyPrice: 0.001,
       stopPrice: 0.002,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('stopPrice');
   });
 
   test('fails with target price below buy price', async () => {
@@ -242,7 +242,7 @@ describe('options validation', () => {
       amount: 1,
       buyPrice: 0.002,
       targetPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('targetPrice');
   });
 
   test('fails with target price below stop price', async () => {
@@ -252,7 +252,7 @@ describe('options validation', () => {
       buyPrice: 0,
       stopPrice: 0.002,
       targetPrice: 0.001,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('targetPrice');
   });
 
   test('fails with scale out amount above amount', async () => {
@@ -262,7 +262,7 @@ describe('options validation', () => {
       buyPrice: 0.001,
       targetPrice: 0.002,
       scaleOutAmount: 2,
-    })).rejects.toThrow('ValidationError');
+    })).rejects.toThrow('scaleOutAmount');
   });
 });
 
