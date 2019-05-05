@@ -2,7 +2,7 @@
 jest.mock('binance-api-node');
 
 const binance = require('binance-api-node');
-const { binanceOco } = require('./binance-oco');
+const { binanceOco } = require('../dist/binance-oco');
 
 const bnbbtcAvgPrice = jest.fn(() => ({ mins: '5', price: '0.002' }));
 const bnbbtcPrices = jest.fn(() => ({ BNBBTC: '0.002' }));

@@ -2,13 +2,18 @@
   "name": "binance-oco",
   "version": "2.3.0",
   "description": "A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on Binance",
-  "main": "binance-oco.js",
+  "main": "dist/binance-oco.js",
   "bin": {
-    "binance-oco": "./cli.js"
+    "binance-oco": "dist/cli.js"
   },
   "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
     "test": "jest"
   },
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tony-ho/binance-oco.git"
@@ -31,6 +36,7 @@
     "eslint": "^4.19.1",
     "eslint-config-airbnb-base": "^13.0.0",
     "eslint-plugin-import": "^2.12.0",
-    "jest": "^24.5.0"
+    "jest": "^24.5.0",
+    "typescript": "^3.4.5"
   }
 }
