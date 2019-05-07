@@ -398,7 +398,7 @@ const binanceOco = async (options) => {
     let commissionAsset;
     if (response.status !== 'FILLED') {
       commissionAsset = await waitForBuyOrderFill(response.orderId).finally(disconnect);
-    } else {
+    } else if (response.fills && response.fills.length > 0) {
       // eslint-disable-next-line prefer-destructuring
       commissionAsset = response.fills[0].commissionAsset;
     }
