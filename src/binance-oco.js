@@ -248,8 +248,10 @@ const binanceOco = async (options) => {
     if (commissionAsset !== 'BNB' || nonBnbFees) {
       try {
         const tradeFee = (await binance.tradeFee()).tradeFee.find(ei => ei.symbol === pair);
-        stopSellAmount = round(BigNumber(stopSellAmount).times(1 - tradeFee.maker), stepSize);
-        targetSellAmount = round(BigNumber(targetSellAmount).times(1 - tradeFee.maker), stepSize);
+        if (tradeFee) {
+          stopSellAmount = round(BigNumber(stopSellAmount).times(1 - tradeFee.maker), stepSize);
+          targetSellAmount = round(BigNumber(targetSellAmount).times(1 - tradeFee.maker), stepSize);
+        }
       } catch (err) {
         debug(`Could not pull trade fee for ${pair}: ${err.body}`);
         throw err;
