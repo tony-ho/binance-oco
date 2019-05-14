@@ -101,7 +101,6 @@ const binanceOco = async (options) => {
         quantity: orderAmount,
         price: targetPrice,
         type: 'LIMIT',
-        newOrderRespType: 'FULL',
       });
 
       debug('Sell response: %o', response);
@@ -358,7 +357,6 @@ const binanceOco = async (options) => {
           side: 'BUY',
           quantity: amount,
           type: 'MARKET',
-          newOrderRespType: 'FULL',
         });
       } else if (BigNumber(buyPrice).gt(0)) {
         const prices = await binance.prices();
@@ -384,7 +382,6 @@ const binanceOco = async (options) => {
             quantity: amount,
             price: buyPrice,
             type: 'LIMIT',
-            newOrderRespType: 'FULL',
           });
         }
       }

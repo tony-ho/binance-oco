@@ -391,7 +391,7 @@ describe('orders', () => {
         buyPrice: 0,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', newOrderRespType: 'FULL', type: 'MARKET',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', type: 'MARKET',
       });
     });
 
@@ -402,7 +402,7 @@ describe('orders', () => {
         buyPrice: 0.001,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0010000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0010000', type: 'LIMIT',
       });
     });
 
@@ -552,7 +552,7 @@ describe('orders', () => {
         targetPrice: 0.003,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -567,7 +567,7 @@ describe('orders', () => {
         symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
       });
       expect(mockOrder).not.toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -586,7 +586,7 @@ describe('orders', () => {
         symbol: 'BNBBTC', side: 'SELL', quantity: '2.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
       });
       expect(mockOrder).not.toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -653,7 +653,7 @@ describe('orders', () => {
         stopPrice: 0.001,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', type: 'LIMIT',
       });
       expect(mockOrder).toBeCalledWith({
         symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
@@ -668,10 +668,10 @@ describe('orders', () => {
         targetPrice: 0.003,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', type: 'LIMIT',
       });
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -684,10 +684,10 @@ describe('orders', () => {
         scaleOutAmount: 0.5,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', type: 'LIMIT',
       });
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '0.50', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '0.50', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -784,13 +784,13 @@ describe('orders', () => {
         targetPrice: 0.003,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', type: 'LIMIT',
       });
       expect(mockOrder).toBeCalledWith({
         symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
       });
       expect(mockOrder).not.toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -804,7 +804,7 @@ describe('orders', () => {
         scaleOutAmount: 1,
       })).resolves.toBe();
       expect(mockOrder).toBeCalledWith({
-        symbol: 'BNBBTC', side: 'BUY', quantity: '3.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'BUY', quantity: '3.00', price: '0.0020000', type: 'LIMIT',
       });
       expect(mockOrder).toBeCalledWith({
         symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
@@ -813,7 +813,7 @@ describe('orders', () => {
         symbol: 'BNBBTC', side: 'SELL', quantity: '2.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
       });
       expect(mockOrder).not.toBeCalledWith({
-        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+        symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
       });
     });
 
@@ -852,14 +852,14 @@ describe('orders', () => {
           targetPrice: 0.003,
         })).resolves.toBe();
         expect(mockOrder).toBeCalledWith({
-          symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+          symbol: 'BNBBTC', side: 'BUY', quantity: '1.00', price: '0.0020000', type: 'LIMIT',
         });
         expect(mockOrder).toBeCalledWith({
           symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
         });
         expect(mockCancel).toBeCalledWith({ symbol: 'BNBBTC', orderId: '1' });
         expect(mockOrder).toBeCalledWith({
-          symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+          symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
         });
       });
 
@@ -873,7 +873,7 @@ describe('orders', () => {
           scaleOutAmount: 1,
         })).resolves.toBe();
         expect(mockOrder).toBeCalledWith({
-          symbol: 'BNBBTC', side: 'BUY', quantity: '3.00', price: '0.0020000', newOrderRespType: 'FULL', type: 'LIMIT',
+          symbol: 'BNBBTC', side: 'BUY', quantity: '3.00', price: '0.0020000', type: 'LIMIT',
         });
         expect(mockOrder).toBeCalledWith({
           symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: expect.anything(), newOrderRespType: 'FULL', stopPrice: '0.0010000', type: 'STOP_LOSS_LIMIT',
@@ -883,7 +883,7 @@ describe('orders', () => {
         });
         expect(mockCancel).toBeCalledWith({ symbol: 'BNBBTC', orderId: '1' });
         expect(mockOrder).toBeCalledWith({
-          symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', newOrderRespType: 'FULL', type: 'LIMIT',
+          symbol: 'BNBBTC', side: 'SELL', quantity: '1.00', price: '0.0030000', type: 'LIMIT',
         });
       });
     });
