@@ -1,7 +1,8 @@
+import BigNumber from "bignumber.js"
+import Binance, { AvgPriceResult, ExecutionReport, Message, NewOrder, SymbolLotSizeFilter, SymbolMinNotionalFilter, SymbolPercentPriceFilter, SymbolPriceFilter, Trade } from "binance-api-node";
+import * as Joi from "joi"
+
 const debug = require('debug')('binance-oco');
-const Joi = require('joi');
-const BigNumber = require('bignumber.js');
-const Binance = require('binance-api-node').default;
 
 const schema = Joi.object().keys({
   pair: Joi.string().uppercase().required(),
@@ -32,7 +33,18 @@ const schema = Joi.object().keys({
   .with('stopLimitPrice', 'stopPrice')
   .with('scaleOutAmount', 'targetPrice');
 
-const binanceOco = async (options) => {
+export const binanceOco = async (options: {
+  pair: string,
+  amount: string,
+  buyPrice: string,
+  buyLimitPrice: string,
+  cancelPrice: string,
+  stopPrice: string,
+  stopLimitPrice: string,
+  targetPrice: string,
+  scaleOutAmount: string,
+  nonBnbFees: boolean,
+}) => {
   const result = Joi.validate(options, schema);
   if (result.error !== null) {
     throw result.error;
@@ -50,13 +62,13 @@ const binanceOco = async (options) => {
   } = options;
 
   const binance = Binance({
-    apiKey: process.env.APIKEY,
-    apiSecret: process.env.APISECRET,
+    apiKey: process.env.APIKEY || '',
+    apiSecret: process.env.APISECRET || '',
   });
 
   let isCancelling = false;
 
-  const cancelOrderAsync = async (symbol, orderId) => {
+  const cancelOrderAsync = async (symbol: string, orderId: number) => {
     if (!isCancelling) {
       isCancelling = true;
       try {
@@ -72,7 +84,7 @@ const binanceOco = async (options) => {
     }
   };
 
-  const placeStopOrderAsync = async (orderAmount) => {
+  const placeStopOrderAsync = async (orderAmount: string) => {
     try {
       const response = await binance.order({
         symbol: pair,
@@ -93,7 +105,7 @@ const binanceOco = async (options) => {
     }
   };
 
-  const placeTargetOrderAsync = async (orderAmount) => {
+  const placeTargetOrderAsync = async (orderAmount: string) => {
     try {
       const response = await binance.order({
         symbol: pair,
@@ -112,7 +124,7 @@ const binanceOco = async (options) => {
     }
   };
 
-  const isOrderFilled = (data) => {
+  const isOrderFilled = (data: ExecutionReport) => {
     const {
       symbol, priceLastTrade, lastTradeQuantity, totalTradeQuantity, side,
       orderType, orderId, orderStatus,
@@ -133,24 +145,24 @@ const binanceOco = async (options) => {
   };
 
   let disconnect;
-  let stopSellAmount;
-  let targetSellAmount;
+  let stopSellAmount: string;
+  let targetSellAmount: string;
 
-  const waitForSellOrderFill = sellOrderId => new Promise((resolve, reject) => {
+  const waitForSellOrderFill = (sellOrderId: number) => new Promise((resolve, reject) => {
     let stopOrderId = sellOrderId;
     let targetOrderId = 0;
 
     try {
-      disconnect = binance.ws.trades(pair, async (trade) => {
+      disconnect = binance.ws.trades(pair, async (trade: Trade) => {
         try {
           const { symbol, price } = trade;
           debug(`${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`);
-          if (stopOrderId && !targetOrderId && BigNumber(price).gte(targetPrice) && !isCancelling) {
+          if (stopOrderId && !targetOrderId && new BigNumber(price).gte(targetPrice) && !isCancelling) {
             await cancelOrderAsync(symbol, stopOrderId);
             stopOrderId = 0;
             targetOrderId = await placeTargetOrderAsync(targetSellAmount);
           } else if (targetOrderId && !stopOrderId
-            && BigNumber(price).lte(stopPrice) && !isCancelling) {
+            && new BigNumber(price).lte(stopPrice) && !isCancelling) {
             await cancelOrderAsync(symbol, targetOrderId);
             targetOrderId = 0;
             stopOrderId = await placeStopOrderAsync(stopSellAmount);
@@ -160,12 +172,13 @@ const binanceOco = async (options) => {
         }
       });
 
-      binance.ws.user((msg) => {
+      binance.ws.user((msg: Message) => {
         try {
           if (msg.eventType !== 'executionReport') return;
-          const { orderId } = msg;
+          const executionReport = (msg as ExecutionReport);
+          const { orderId } = executionReport;
           if (orderId === stopOrderId || orderId === targetOrderId) {
-            if (isOrderFilled(msg)) {
+            if (isOrderFilled(executionReport)) {
               resolve();
             }
           }
@@ -190,66 +203,70 @@ const binanceOco = async (options) => {
   let isLimitEntry = false;
   let isStopEntry = false;
 
-  const waitForBuyOrderFill = buyOrderId => new Promise((resolve, reject) => {
-    try {
-      disconnect = binance.ws.trades(pair, async (trade) => {
-        try {
-          const { symbol, price } = trade;
-          if (!cancelPrice) {
-            debug(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
-          } else {
-            debug(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
+  const waitForBuyOrderFill = (buyOrderId: number) : Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        disconnect = binance.ws.trades(pair, async (trade: Trade) => {
+          try {
+            const { symbol, price } = trade;
+            if (!cancelPrice) {
+              debug(`${symbol} trade update. price: ${price} buy: ${buyPrice}`);
+            } else {
+              debug(`${symbol} trade update. price: ${price} buy: ${buyPrice} cancel: ${cancelPrice}`);
 
-            if (((isStopEntry && BigNumber(price).lte(cancelPrice))
-              || (isLimitEntry && BigNumber(price).gte(cancelPrice)))
-              && !isCancelling) {
-              await cancelOrderAsync(symbol, buyOrderId);
-              reject(new Error(`Order CANCELED. Reason: cancel price ${cancelPrice} hit`));
+              if (((isStopEntry && new BigNumber(price).lte(cancelPrice))
+                || (isLimitEntry && new BigNumber(price).gte(cancelPrice)))
+                && !isCancelling) {
+                await cancelOrderAsync(symbol, buyOrderId);
+                reject(new Error(`Order CANCELED. Reason: cancel price ${cancelPrice} hit`));
+              }
             }
+          } catch (err) {
+            reject(err);
           }
-        } catch (err) {
-          reject(err);
-        }
-      });
+        });
 
-      binance.ws.user((msg) => {
-        try {
-          if (msg.eventType !== 'executionReport') return;
-          const { orderId } = msg;
-          if (orderId === buyOrderId && isOrderFilled(msg)) {
-            resolve(msg.commissionAsset);
+        binance.ws.user((msg: Message) => {
+          try {
+            if (msg.eventType !== 'executionReport') return;
+            const executionReport = (msg as ExecutionReport);
+            const { orderId } = executionReport;
+            if (orderId === buyOrderId && isOrderFilled(executionReport)) {
+              const { commissionAsset } = executionReport;
+              resolve(commissionAsset);
+            }
+          } catch (err) {
+            reject(err);
           }
-        } catch (err) {
-          reject(err);
-        }
-      });
+        });
 
-      binance.getOrder({
-        symbol: pair,
-        orderId: buyOrderId,
-      }).then((response) => {
-        if (response.status === 'FILLED') {
-          // Binance API doesn't provide commission asset information; default to BNB
-          resolve('BNB');
-        }
-      });
-    } catch (err) {
-      reject(err);
-    }
-  });
-
-  const round = (toBeRounded, toNearest) => {
-    const fractionDigits = Math.max(toNearest.indexOf('1') - 1, 0);
-    return BigNumber(toBeRounded).toFixed(fractionDigits, BigNumber.ROUND_DOWN);
+        binance.getOrder({
+          symbol: pair,
+          orderId: buyOrderId,
+        }).then((response) => {
+          if (response.status === 'FILLED') {
+            // Binance API doesn't provide commission asset information; default to BNB
+            resolve('BNB');
+          }
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
   };
 
-  const adjustSellAmountsForCommission = async (commissionAsset, stepSize) => {
+  const round = (toBeRounded: BigNumber, toNearest: string) => {
+    const fractionDigits = Math.max(toNearest.indexOf('1') - 1, 0);
+    return toBeRounded.toFixed(fractionDigits, BigNumber.ROUND_DOWN);
+  };
+
+  const adjustSellAmountsForCommission = async (commissionAsset: string, stepSize: string) => {
     if (commissionAsset !== 'BNB' || nonBnbFees) {
       try {
-        const tradeFee = (await binance.tradeFee()).tradeFee.find(ei => ei.symbol === pair);
+        const tradeFee = (await binance.tradeFee()).tradeFee.find((ei: { symbol: string }) => ei.symbol === pair);
         if (tradeFee) {
-          stopSellAmount = round(BigNumber(stopSellAmount).times(1 - tradeFee.maker), stepSize);
-          targetSellAmount = round(BigNumber(targetSellAmount).times(1 - tradeFee.maker), stepSize);
+          stopSellAmount = round(new BigNumber(stopSellAmount).times(1 - tradeFee.maker), stepSize);
+          targetSellAmount = round(new BigNumber(targetSellAmount).times(1 - tradeFee.maker), stepSize);
         }
       } catch (err) {
         debug(`Could not pull trade fee for ${pair}: ${err.body}`);
@@ -258,39 +275,45 @@ const binanceOco = async (options) => {
     }
   };
 
-  const symbolData = (await binance.exchangeInfo()).symbols.find(ei => ei.symbol === pair);
+  const getAveragePrice = async(pair: string) => {
+    const result = await binance.avgPrice({ symbol: pair });
+    return (result as AvgPriceResult).price ? (result as AvgPriceResult).price : (result as AvgPriceResult[])[0].price;
+  };
+
+  const symbolData = (await binance.exchangeInfo()).symbols.find((ei: { symbol: string }) => ei.symbol === pair);
   if (!symbolData) {
     throw new Error(`Could not pull exchange info for ${pair}`);
   }
 
   const { filters } = symbolData;
-  const { stepSize } = filters.find(eis => eis.filterType === 'LOT_SIZE');
-  const { tickSize, minPrice } = filters.find(eis => eis.filterType === 'PRICE_FILTER');
-  const { minNotional } = filters.find(eis => eis.filterType === 'MIN_NOTIONAL');
+  const { stepSize } = filters.find((eis: { filterType: string }) => eis.filterType === 'LOT_SIZE') as SymbolLotSizeFilter;
+  const { tickSize, minPrice } = filters.find((eis: { filterType: string }) => eis.filterType === 'PRICE_FILTER') as SymbolPriceFilter;
+  const { minNotional } = filters.find((eis: { filterType: string }) => eis.filterType === 'MIN_NOTIONAL') as SymbolMinNotionalFilter ;
 
-  amount = round(amount, stepSize);
+  amount = round(new BigNumber(amount), stepSize);
 
   if (scaleOutAmount) {
-    scaleOutAmount = round(scaleOutAmount, stepSize);
+    scaleOutAmount = round(new BigNumber(scaleOutAmount), stepSize);
   }
 
   stopSellAmount = amount;
   targetSellAmount = scaleOutAmount || amount;
 
   if (buyPrice) {
-    buyPrice = round(buyPrice, tickSize);
+    buyPrice = round(new BigNumber(buyPrice), tickSize);
 
     if (buyLimitPrice) {
-      buyLimitPrice = round(buyLimitPrice, tickSize);
+      buyLimitPrice = round(new BigNumber(buyLimitPrice), tickSize);
     } else {
       const accountInfo = await binance.accountInfo();
       const { quoteAsset } = symbolData;
-      const available = accountInfo.balances.find(ab => ab.asset === quoteAsset).free;
-      const maxAvailablePrice = BigNumber(available).div(amount);
+      const accountBalance = accountInfo.balances.find((ab: { asset: string }) => ab.asset === quoteAsset);
+      const available = accountBalance ? accountBalance.free : '';
+      const maxAvailablePrice = new BigNumber(available).div(amount).toNumber();
 
-      const currentPrice = (await binance.avgPrice({ symbol: pair })).price;
-      const { multiplierUp } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
-      const maxPercentPrice = BigNumber(currentPrice).times(multiplierUp);
+      const currentPrice = await getAveragePrice(pair);
+      const { multiplierUp } = filters.find((eis: { filterType: string }) => eis.filterType === 'PERCENT_PRICE') as SymbolPercentPriceFilter;
+      const maxPercentPrice = new BigNumber(currentPrice).times(multiplierUp).toNumber();
 
       buyLimitPrice = round(BigNumber.min(maxAvailablePrice, maxPercentPrice)
         .minus(tickSize), tickSize);
@@ -298,27 +321,27 @@ const binanceOco = async (options) => {
   }
 
   if (stopPrice) {
-    stopPrice = round(stopPrice, tickSize);
+    stopPrice = round(new BigNumber(stopPrice), tickSize);
 
-    const minStopSellAmount = BigNumber(stopSellAmount).minus(targetSellAmount).isZero()
+    const minStopSellAmount = new BigNumber(stopSellAmount).minus(targetSellAmount).isZero()
       ? stopSellAmount
-      : round(BigNumber.min(targetSellAmount, BigNumber(stopSellAmount).minus(targetSellAmount)),
+      : round(BigNumber.min(targetSellAmount, new BigNumber(stopSellAmount).minus(targetSellAmount)),
         stepSize);
 
     if (stopLimitPrice) {
-      stopLimitPrice = round(stopLimitPrice, tickSize);
+      stopLimitPrice = round(new BigNumber(stopLimitPrice), tickSize);
     } else {
-      const currentPrice = (await binance.avgPrice({ symbol: pair })).price;
-      const { multiplierDown } = filters.find(eis => eis.filterType === 'PERCENT_PRICE');
-      const minPercentPrice = BigNumber(currentPrice).times(multiplierDown);
-      const minNotionalPrice = BigNumber(minNotional).div(minStopSellAmount);
+      const currentPrice = await getAveragePrice(pair);
+      const { multiplierDown } = filters.find((eis: { filterType: string }) => eis.filterType === 'PERCENT_PRICE') as SymbolPercentPriceFilter;
+      const minPercentPrice = new BigNumber(currentPrice).times(multiplierDown);
+      const minNotionalPrice = new BigNumber(minNotional).div(minStopSellAmount);
 
       stopLimitPrice = round(BigNumber.max(minPrice, minPercentPrice, minNotionalPrice)
         .plus(tickSize), tickSize);
     }
 
     if (buyPrice || targetPrice) {
-      const order = {
+      const order: NewOrder = {
         symbol: pair,
         side: 'SELL',
         quantity: minStopSellAmount,
@@ -333,9 +356,9 @@ const binanceOco = async (options) => {
   }
 
   if (targetPrice) {
-    targetPrice = round(targetPrice, tickSize);
+    targetPrice = round(new BigNumber(targetPrice), tickSize);
     if (buyPrice || stopPrice) {
-      const order = {
+      const order: NewOrder = {
         symbol: pair,
         side: 'SELL',
         quantity: targetSellAmount,
@@ -348,22 +371,22 @@ const binanceOco = async (options) => {
     }
   }
 
-  if (BigNumber(buyPrice).gte(0)) {
+  if (new BigNumber(buyPrice).gte(0)) {
     let response;
     try {
-      if (BigNumber(buyPrice).isZero()) {
+      if (new BigNumber(buyPrice).isZero()) {
         response = await binance.order({
           symbol: pair,
           side: 'BUY',
           quantity: amount,
           type: 'MARKET',
         });
-      } else if (BigNumber(buyPrice).gt(0)) {
+      } else if (new BigNumber(buyPrice).gt(0)) {
         const prices = await binance.prices();
         const currentPrice = prices[pair];
         debug(`${pair} price: ${currentPrice}`);
 
-        if (BigNumber(buyPrice).gt(currentPrice)) {
+        if (new BigNumber(buyPrice).gt(currentPrice)) {
           isStopEntry = true;
           response = await binance.order({
             symbol: pair,
@@ -389,25 +412,26 @@ const binanceOco = async (options) => {
       throw err;
     }
 
-    debug('Buy response: %o', response);
-    debug(`order id: ${response.orderId}`);
+    if (response) {
+      debug('Buy response: %o', response);
+      debug(`order id: ${response.orderId}`);
 
-    let commissionAsset;
-    if (response.status !== 'FILLED') {
-      commissionAsset = await waitForBuyOrderFill(response.orderId).finally(disconnect);
-    } else if (response.fills && response.fills.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      commissionAsset = response.fills[0].commissionAsset;
-    }
+      let commissionAsset: string = '';
+      if (response.status !== 'FILLED') {
+        commissionAsset = await waitForBuyOrderFill(response.orderId).finally(disconnect);
+      } else if (response.fills && response.fills.length > 0) {
+        commissionAsset = response.fills[0].commissionAsset;
+      }
 
-    if (stopPrice || targetPrice) {
-      await adjustSellAmountsForCommission(commissionAsset, stepSize);
+      if (stopPrice || targetPrice) {
+        await adjustSellAmountsForCommission(commissionAsset, stepSize);
+      }
     }
   }
 
   if (stopPrice && targetPrice) {
-    if (BigNumber(targetSellAmount).lt(stopSellAmount)) {
-      await placeStopOrderAsync(round(BigNumber(stopSellAmount)
+    if (new BigNumber(targetSellAmount).lt(stopSellAmount)) {
+      await placeStopOrderAsync(round(new BigNumber(stopSellAmount)
         .minus(targetSellAmount), stepSize));
       stopSellAmount = targetSellAmount;
     }
@@ -420,5 +444,3 @@ const binanceOco = async (options) => {
     await placeTargetOrderAsync(targetSellAmount);
   }
 };
-
-module.exports = { binanceOco };
