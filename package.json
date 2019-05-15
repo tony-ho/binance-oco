@@ -9,6 +9,7 @@
   "types": "dist/binance-oco.d.ts",
   "scripts": {
     "build": "tsc",
+    "lint": "eslint src/** --fix",
     "prepare": "npm run build",
     "test": "jest"
   },
@@ -36,9 +37,9 @@
   "devDependencies": {
     "@types/joi": "^14.3.3",
     "@types/node": "^12.0.0",
-    "eslint": "^4.19.1",
-    "eslint-config-airbnb-base": "^13.0.0",
-    "eslint-plugin-import": "^2.12.0",
+    "@typescript-eslint/eslint-plugin": "^1.9.0",
+    "@typescript-eslint/parser": "^1.9.0",
+    "eslint": "^5.16.0",
     "jest": "^24.5.0",
     "typescript": "^3.4.5"
   }
