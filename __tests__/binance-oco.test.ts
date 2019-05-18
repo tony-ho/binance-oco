@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/no-var-requires */
 jest.mock("binance-api-node");
 
@@ -366,7 +367,7 @@ describe("order validation", () => {
         amount: 1,
         buyPrice: 0
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).not.toBeCalled();
   });
 
@@ -377,7 +378,7 @@ describe("order validation", () => {
         amount: 1,
         stopPrice: 0.001
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).not.toBeCalled();
   });
 
@@ -388,7 +389,7 @@ describe("order validation", () => {
         amount: 1,
         targetPrice: 0.003
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).not.toBeCalled();
   });
 
@@ -400,7 +401,7 @@ describe("order validation", () => {
         stopPrice: 0.001,
         targetPrice: 0.003
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).toBeCalledWith({
       symbol: "BNBBTC",
       side: "SELL",
@@ -419,7 +420,7 @@ describe("order validation", () => {
         targetPrice: 0.003,
         scaleOutAmount: 1
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).toBeCalledWith({
       symbol: "BNBBTC",
       side: "SELL",
@@ -445,7 +446,7 @@ describe("order validation", () => {
         buyPrice: 0.002,
         stopPrice: 0.001
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).toBeCalledWith({
       symbol: "BNBBTC",
       side: "SELL",
@@ -464,7 +465,7 @@ describe("order validation", () => {
         buyPrice: 0.002,
         targetPrice: 0.003
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).toBeCalledWith({
       symbol: "BNBBTC",
       side: "SELL",
@@ -483,7 +484,7 @@ describe("order validation", () => {
         stopPrice: 0.001,
         targetPrice: 0.003
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).toBeCalledWith({
       symbol: "BNBBTC",
       side: "SELL",
@@ -511,7 +512,7 @@ describe("order validation", () => {
         targetPrice: 0.003,
         scaleOutAmount: 1
       })
-    ).resolves.toBe();
+    ).resolves.not.toBeDefined();
     expect(mockOrderTest).toBeCalledWith({
       symbol: "BNBBTC",
       side: "SELL",
@@ -541,7 +542,7 @@ describe("orders", () => {
           amount: 1,
           buyPrice: 0
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -557,7 +558,7 @@ describe("orders", () => {
           amount: 1,
           buyPrice: 0.001
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -574,7 +575,7 @@ describe("orders", () => {
           amount: 1,
           buyPrice: 0.003
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -594,7 +595,7 @@ describe("orders", () => {
           buyPrice: 0.003,
           buyLimitPrice: 0.004
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -627,7 +628,7 @@ describe("orders", () => {
           amount: 1,
           buyPrice: 0.002
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalled();
       expect(getOrderFilled).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
     });
@@ -640,7 +641,7 @@ describe("orders", () => {
           buyPrice: 0.002,
           cancelPrice: 0.001
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalled();
       expect(mockCancel).not.toBeCalled();
     });
@@ -714,7 +715,7 @@ describe("orders", () => {
           amount: 1,
           stopPrice: 0.001
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
@@ -734,7 +735,7 @@ describe("orders", () => {
           stopPrice: 0.002,
           stopLimitPrice: 0.001
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
@@ -753,7 +754,7 @@ describe("orders", () => {
           amount: 1,
           targetPrice: 0.003
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
@@ -771,7 +772,7 @@ describe("orders", () => {
           stopPrice: 0.001,
           targetPrice: 0.003
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
@@ -799,7 +800,7 @@ describe("orders", () => {
           targetPrice: 0.003,
           scaleOutAmount: 1
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
@@ -847,7 +848,7 @@ describe("orders", () => {
           stopPrice: 0.001,
           targetPrice: 0.003
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalled();
       expect(getOrderFilled).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
     });
@@ -894,7 +895,7 @@ describe("orders", () => {
           buyPrice: 0.002,
           stopPrice: 0.001
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -921,7 +922,7 @@ describe("orders", () => {
           buyPrice: 0.002,
           targetPrice: 0.003
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -947,7 +948,7 @@ describe("orders", () => {
           targetPrice: 0.003,
           scaleOutAmount: 0.5
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -973,7 +974,7 @@ describe("orders", () => {
           stopPrice: 0.001,
           nonBnbFees: true
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
@@ -1015,7 +1016,7 @@ describe("orders", () => {
           buyPrice: 0,
           stopPrice: 4000
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(orderWithNonBnbCommission).toBeCalledWith({
         symbol: "BTCUSDT",
         side: "SELL",
@@ -1064,7 +1065,7 @@ describe("orders", () => {
           buyPrice: 5000,
           stopPrice: 4000
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BTCUSDT",
         side: "SELL",
@@ -1085,7 +1086,7 @@ describe("orders", () => {
           stopPrice: 0.001,
           targetPrice: 0.003
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -1121,7 +1122,7 @@ describe("orders", () => {
           targetPrice: 0.003,
           scaleOutAmount: 1
         })
-      ).resolves.toBe();
+      ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
         side: "BUY",
@@ -1191,7 +1192,7 @@ describe("orders", () => {
             stopPrice: 0.001,
             targetPrice: 0.003
           })
-        ).resolves.toBe();
+        ).resolves.not.toBeDefined();
         expect(mockOrder).toBeCalledWith({
           symbol: "BNBBTC",
           side: "BUY",
@@ -1228,7 +1229,7 @@ describe("orders", () => {
             targetPrice: 0.003,
             scaleOutAmount: 1
           })
-        ).resolves.toBe();
+        ).resolves.not.toBeDefined();
         expect(mockOrder).toBeCalledWith({
           symbol: "BNBBTC",
           side: "BUY",
