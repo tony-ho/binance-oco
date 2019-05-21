@@ -58,14 +58,14 @@ const schema = Joi.object()
 export const binanceOco = async (options: {
   pair: string;
   amount: string;
-  buyPrice: string;
-  buyLimitPrice: string;
-  cancelPrice: string;
-  stopPrice: string;
-  stopLimitPrice: string;
-  targetPrice: string;
-  scaleOutAmount: string;
-  nonBnbFees: boolean;
+  buyPrice?: string;
+  buyLimitPrice?: string;
+  cancelPrice?: string;
+  stopPrice?: string;
+  stopLimitPrice?: string;
+  targetPrice?: string;
+  scaleOutAmount?: string;
+  nonBnbFees?: boolean;
 }): Promise<void> => {
   const result = Joi.validate(options, schema);
   if (result.error !== null) {
@@ -204,6 +204,7 @@ export const binanceOco = async (options: {
                 if (
                   stopOrderId &&
                   !targetOrderId &&
+                  targetPrice &&
                   new BigNumber(price).gte(targetPrice) &&
                   !isCancelling
                 ) {
@@ -213,6 +214,7 @@ export const binanceOco = async (options: {
                 } else if (
                   targetOrderId &&
                   !stopOrderId &&
+                  stopPrice &&
                   new BigNumber(price).lte(stopPrice) &&
                   !isCancelling
                 ) {
@@ -500,7 +502,7 @@ export const binanceOco = async (options: {
     }
   }
 
-  if (new BigNumber(buyPrice).gte(0)) {
+  if (typeof buyPrice !== "undefined" && new BigNumber(buyPrice).gte(0)) {
     let response;
     try {
       if (new BigNumber(buyPrice).isZero()) {
