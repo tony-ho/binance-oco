@@ -1266,4 +1266,44 @@ describe("orders", () => {
       });
     });
   });
+
+  describe("exit hook", () => {
+
+    beforeEach(() => {
+      binance.default.mockImplementation(() => ({
+        avgPrice: bnbbtcAvgPrice,
+        accountInfo: mockAccountInfo,
+        exchangeInfo: bnbbtcExchangeInfo,
+        order: mockOrder,
+        orderTest: jest.fn(),
+        getOrder: getOrderFilled,
+        prices: bnbbtcPrices,
+        ws: {
+          trades: jest.fn(),
+          user: jest.fn()
+        }
+      }));
+    });
+
+    test("exit hook: order placed not filled - cancels order", async () => {
+
+      let promiseResolves = false;
+      const exitHook = async (cancel: Function) => {
+        await cancel()
+        promiseResolves = true;
+      }
+
+      await expect(
+        binanceOco({
+          pair: "BNBBTC",
+          amount: 1,
+          buyPrice: 0.002,
+          stopPrice: 0.001,
+          targetPrice: 0.003
+        }, exitHook)
+      ).resolves.not.toBeDefined();
+
+      expect(promiseResolves).toEqual(true);
+    });
+  });
 });

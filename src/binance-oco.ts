@@ -4,6 +4,7 @@ import Binance, {
   ExecutionReport,
   Message,
   NewOrder,
+  Order,
   SymbolLotSizeFilter,
   SymbolMinNotionalFilter,
   SymbolPercentPriceFilter,
@@ -66,7 +67,7 @@ export const binanceOco = async (options: {
   targetPrice?: string;
   scaleOutAmount?: string;
   nonBnbFees?: boolean;
-}): Promise<void> => {
+}, exitHook?: Function): Promise<void> => {
   const result = Joi.validate(options, schema);
   if (result.error !== null) {
     throw result.error;
@@ -81,7 +82,7 @@ export const binanceOco = async (options: {
     stopPrice,
     stopLimitPrice,
     targetPrice,
-    scaleOutAmount
+    scaleOutAmount,
   } = options;
 
   const binance = Binance({
@@ -503,7 +504,7 @@ export const binanceOco = async (options: {
   }
 
   if (typeof buyPrice !== "undefined" && new BigNumber(buyPrice).gte(0)) {
-    let response;
+    let response: any
     try {
       if (new BigNumber(buyPrice).isZero()) {
         response = await binance.order({
@@ -558,6 +559,17 @@ export const binanceOco = async (options: {
 
       if (stopPrice || targetPrice) {
         await adjustSellAmountsForCommission(commissionAsset, stepSize);
+      }
+
+      // CLI fired exit hook to safely cancel order
+      if (exitHook) {
+        exitHook(async () => {
+          debug("Exit hook fired")
+          var order = response as Order
+          if (order) {
+            await cancelOrderAsync(pair, order.orderId);
+          }
+        })
       }
     }
   }

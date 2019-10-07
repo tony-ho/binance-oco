@@ -86,6 +86,22 @@ const {
 
 const debug = require("debug")("binance-oco");
 
+const exitHooks = (cancel: Function) => {
+
+  // safety mechanism - cancel order if process is interrupted.
+  process.once('SIGINT', async (code) => {
+    debug(`handled script interrupt - code ${code}.`);
+    await cancel()
+    process.exit(0);
+  });
+
+  process.once('SIGTERM', async (code) => {
+    debug(`handled script interrupt - code ${code}.`);
+    await cancel()
+    process.exit(0);
+  });
+}
+
 (async (): Promise<void> => {
   try {
     await binanceOco({
@@ -99,10 +115,11 @@ const debug = require("debug")("binance-oco");
       cancelPrice,
       scaleOutAmount,
       nonBnbFees
-    });
+    }, exitHooks);
     process.exit(0);
   } catch (err) {
     debug(err.message);
     process.exit(1);
   }
+
 })();
