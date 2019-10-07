@@ -4,6 +4,7 @@ import Binance, {
   ExecutionReport,
   Message,
   NewOrder,
+  Order,
   SymbolLotSizeFilter,
   SymbolMinNotionalFilter,
   SymbolPercentPriceFilter,
@@ -55,18 +56,21 @@ const schema = Joi.object()
   .with("stopLimitPrice", "stopPrice")
   .with("scaleOutAmount", "targetPrice");
 
-export const binanceOco = async (options: {
-  pair: string;
-  amount: string;
-  buyPrice?: string;
-  buyLimitPrice?: string;
-  cancelPrice?: string;
-  stopPrice?: string;
-  stopLimitPrice?: string;
-  targetPrice?: string;
-  scaleOutAmount?: string;
-  nonBnbFees?: boolean;
-}): Promise<void> => {
+export const binanceOco = async (
+  options: {
+    pair: string;
+    amount: string;
+    buyPrice?: string;
+    buyLimitPrice?: string;
+    cancelPrice?: string;
+    stopPrice?: string;
+    stopLimitPrice?: string;
+    targetPrice?: string;
+    scaleOutAmount?: string;
+    nonBnbFees?: boolean;
+  },
+  exitHook?: Function
+): Promise<void> => {
   const result = Joi.validate(options, schema);
   if (result.error !== null) {
     throw result.error;
@@ -447,7 +451,7 @@ export const binanceOco = async (options: {
   }
 
   if (typeof buyPrice !== "undefined" && new BigNumber(buyPrice).gte(0)) {
-    let response;
+    let response: any
     try {
       if (new BigNumber(buyPrice).isZero()) {
         response = await binance.order({
@@ -491,14 +495,31 @@ export const binanceOco = async (options: {
       debug("Buy response: %o", response);
       debug(`order id: ${response.orderId}`);
 
+      let orderFilled = (response.status == "FILLED");
+      // Exit hook to safely cancel order
+      if (exitHook) {
+        exitHook(async () => {
+          debug("Exit hook fired")
+          var order = response as Order
+          if (order) {
+            if (!orderFilled) {
+              await cancelOrderAsync(pair, order.orderId);
+            }
+          }
+        })
+      }
+
       let commissionAsset = "";
       if (response.status !== "FILLED") {
-        commissionAsset = await waitForBuyOrderFill(response.orderId).finally(
+        commissionAsset = await waitForBuyOrderFill(response.orderId)
+        .finally(
           disconnect
         );
       } else if (response.fills && response.fills.length > 0) {
         commissionAsset = response.fills[0].commissionAsset;
       }
+      orderFilled = true;
+
 
       if (stopPrice || targetPrice) {
         await adjustSellAmountsForCommission(commissionAsset, stepSize);
