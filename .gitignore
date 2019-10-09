@@ -60,5 +60,8 @@ typings/
 # next.js build output
 .next
 
-package-lock.json
 dist
+
+# ide project
+.idea/
+.vscode/
