@@ -1269,31 +1269,33 @@ describe("orders", () => {
 
   describe("exit hook", () => {
 
-    beforeEach(() => {
+    test("exit hook: order placed not filled - cancels order", (done) => {
+
       binance.default.mockImplementation(() => ({
         avgPrice: bnbbtcAvgPrice,
         accountInfo: mockAccountInfo,
         exchangeInfo: bnbbtcExchangeInfo,
         order: mockOrder,
+        cancelOrder: mockCancel,
         orderTest: jest.fn(),
-        getOrder: getOrderFilled,
+        getOrder: jest.fn(() => Promise.resolve({ status: "NEW" })),
         prices: bnbbtcPrices,
         ws: {
           trades: jest.fn(),
           user: jest.fn()
         }
       }));
-    });
 
-    test("exit hook: order placed not filled - cancels order", async () => {
-
-      let promiseResolves = false;
-      const exitHook = async (cancel: Function) => {
-        await cancel()
-        promiseResolves = true;
+      let exitHook = (cancel: Function) => {
+        // this must work asychronously hence the wait
+        setImmediate(async () => {
+          await cancel()
+          expect(mockCancel).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
+          done()
+        })
       }
 
-      await expect(
+      expect(
         binanceOco({
           pair: "BNBBTC",
           amount: 1,
@@ -1303,7 +1305,145 @@ describe("orders", () => {
         }, exitHook)
       ).resolves.not.toBeDefined();
 
-      expect(promiseResolves).toEqual(true);
+
+    });
+
+    test("exit hook: immediate order fill - do not cancel stop order", (done) => {
+
+      const mockOrder = jest.fn(() => ({
+        orderId: "1",
+        status: "FILLED",
+        fills: [{
+          commissionAsset: "BNB",
+        }]
+      }));
+
+      binance.default.mockImplementation(() => ({
+        avgPrice: bnbbtcAvgPrice,
+        accountInfo: mockAccountInfo,
+        exchangeInfo: bnbbtcExchangeInfo,
+        order: mockOrder,
+        cancelOrder: mockCancel,
+        orderTest: jest.fn(),
+        getOrder: jest.fn(() => Promise.resolve({ status: "NEW" })),
+        prices: bnbbtcPrices,
+        tradeFee: jest.fn(() => ({
+          tradeFee: [
+            {
+              symbol: "BNBBTC",
+              maker: 0.001,
+              taker: 0.001
+            }
+          ]
+        })),
+        ws: {
+          trades: jest.fn(),
+          user: jest.fn()
+        }
+      }));
+
+      let exitHook = (cancel: Function) => {
+        // this must work asychronously hence the wait
+        setImmediate(async () => {
+          await cancel()
+          expect(mockCancel).not.toBeCalled();
+          done()
+        })
+      }
+
+      expect(
+        binanceOco({
+          pair: "BNBBTC",
+          amount: 1,
+          buyPrice: 0.002,
+          stopPrice: 0.001,
+          targetPrice: 0.003
+        }, exitHook)
+      ).resolves.not.toBeDefined();
+    });
+
+    test("exit hook: order filled via order status - do not cancel stop order", (done) => {
+
+      binance.default.mockImplementation(() => ({
+        avgPrice: bnbbtcAvgPrice,
+        accountInfo: mockAccountInfo,
+        exchangeInfo: bnbbtcExchangeInfo,
+        order: mockOrder,
+        cancelOrder: mockCancel,
+        orderTest: jest.fn(),
+        getOrder: jest.fn(() => Promise.resolve({ status: "FILLED" })),
+        prices: bnbbtcPrices,
+        ws: {
+          trades: jest.fn(),
+          user: jest.fn()
+        }
+      }));
+
+      let exitHook = (cancel: Function) => {
+        // this must work asychronously hence the wait
+        setImmediate(async () => {
+          await cancel()
+          expect(mockCancel).not.toBeCalled();
+          done()
+        })
+      }
+
+      expect(
+        binanceOco({
+          pair: "BNBBTC",
+          amount: 1,
+          buyPrice: 0.002,
+          stopPrice: 0.001,
+          targetPrice: 0.003
+        }, exitHook)
+      ).resolves.not.toBeDefined();
+    });
+
+    test("exit hook: non market order filled via user update - do not cancel stop order", (done) => {
+
+      // this is a fill via user data
+      binance.default.mockImplementation(() => ({
+        avgPrice: bnbbtcAvgPrice,
+        accountInfo: mockAccountInfo,
+        exchangeInfo: bnbbtcExchangeInfo,
+        order: mockOrder,
+        cancelOrder: mockCancel,
+        orderTest: jest.fn(),
+        getOrder: jest.fn(() => Promise.resolve({ status: "NEW" })),
+        prices: bnbbtcPrices,
+        ws: {
+          trades: jest.fn(),
+          user: jest.fn(cb => {
+            cb({
+              eventType: "executionReport",
+              orderId: "1",
+              commissionAsset: "BNB",
+              orderStatus: "FILLED"
+            });
+          })
+        }
+      }));
+
+      let exitHook = (cancel: Function) => {
+        // this must work asychronously hence the wait
+        setImmediate(async () => {
+          await cancel()
+          expect(mockCancel).not.toBeCalled();
+          done()
+        })
+      }
+
+      expect(
+        binanceOco({
+          pair: "BNBBTC",
+          amount: 1,
+          buyPrice: 0.002,
+          stopPrice: 0.001,
+          targetPrice: 0.003
+        }, exitHook)
+      ).resolves.not.toBeDefined();
     });
   });
+
+
 });

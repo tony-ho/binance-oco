@@ -92,13 +92,11 @@ const exitHooks = (cancel: Function) => {
   process.once('SIGINT', async (code) => {
     debug(`handled script interrupt - code ${code}.`);
     await cancel()
-    process.exit(0);
   });
 
   process.once('SIGTERM', async (code) => {
     debug(`handled script interrupt - code ${code}.`);
     await cancel()
-    process.exit(0);
   });
 }
 
