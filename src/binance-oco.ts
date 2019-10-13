@@ -548,28 +548,34 @@ export const binanceOco = async (options: {
       debug("Buy response: %o", response);
       debug(`order id: ${response.orderId}`);
 
-      let commissionAsset = "";
-      if (response.status !== "FILLED") {
-        commissionAsset = await waitForBuyOrderFill(response.orderId).finally(
-          disconnect
-        );
-      } else if (response.fills && response.fills.length > 0) {
-        commissionAsset = response.fills[0].commissionAsset;
-      }
-
-      if (stopPrice || targetPrice) {
-        await adjustSellAmountsForCommission(commissionAsset, stepSize);
-      }
-
-      // CLI fired exit hook to safely cancel order
+      let orderFilled = (response.status == "FILLED");
+      // Exit hook to safely cancel order
       if (exitHook) {
         exitHook(async () => {
           debug("Exit hook fired")
           var order = response as Order
           if (order) {
-            await cancelOrderAsync(pair, order.orderId);
+            if (!orderFilled) {
+              await cancelOrderAsync(pair, order.orderId);
+            }
           }
         })
+      }
+
+      let commissionAsset = "";
+      if (response.status !== "FILLED") {
+        commissionAsset = await waitForBuyOrderFill(response.orderId)
+        .finally(
+          disconnect
+        );
+      } else if (response.fills && response.fills.length > 0) {
+        commissionAsset = response.fills[0].commissionAsset;
+      }
+      orderFilled = true;
+
+
+      if (stopPrice || targetPrice) {
+        await adjustSellAmountsForCommission(commissionAsset, stepSize);
       }
     }
   }
