@@ -34,6 +34,9 @@
     "joi": "^14.3.1",
     "yargs": "^11.0.0"
   },
+  "engines": {
+    "node": "^8.0.0 || ^10.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^24.0.13",
     "@types/joi": "^14.3.3",
