@@ -90,22 +90,29 @@ binance-oco -p BNBBTC -a 1 -b 0.002 -t 0.003
 
 ### One-Cancels-the-Other (OCO) sell orders
 
-Place a stop-limit sell for 1 BNB @ 0.001 BTC. If a price of 0.003 BTC is reached, cancel stop-limit order and place a limit sell @ 0.003 BTC:
+Place an OCO sell for 1 BNB with:
+- stop price @ 0.001 BTC
+- limit price @ 0.003 BTC
 ```
 binance-oco -p BNBBTC -a 1 -s 0.001 -t 0.003
 ```
 
-Place a buy order for 1 BNB @ 0.002 BTC. Once filled, place a stop-limit sell @ 0.001 BTC. If a price of 0.003 BTC is reached, cancel stop-limit order and place a limit sell @ 0.003 BTC:
+Place a buy order for 1 BNB @ 0.002 BTC. Once filled, place an OCO sell for 1 BNB with:
+- stop price @ 0.001 BTC
+- limit price @ 0.003 BTC
 ```
 binance-oco -p BNBBTC -a 1 -b 0.002 -s 0.001 -t 0.003
 ```
 
 Place a buy order for 2 BNB @ 0.002 BTC. Once filled, place:
-- a stop-limit sell for the scale out amount of 1 BNB @ 0.001 BTC, and
+- an OCO sell for the scale out amount of 1 BNB with:
+    - stop price @ 0.001 BTC
+    - limit price @ 0.003 BTC, and
 - a stop-limit sell for the remaining 1 BNB @ 0.001 BTC
 
-If a price of 0.003 BTC is reached, cancel first stop-limit order and place a limit sell for the scale out amount 1 BNB @ 0.003 BTC. This process is referred to as 'scaling out' of a position.
-The second stop-limit sell for the remaining 1 BNB is left in place.
+This process is referred to as 'scaling out' of a position.
 ```
 binance-oco -p BNBBTC -a 2 -b 0.002 -s 0.001 -t 0.003 -S 1
 ```
+
+See [How to Use OCO (One-Cancels-the-Other) Order Type](https://www.binance.com/en/support/articles/360032605831) for information on OCO orders.

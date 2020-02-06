@@ -125,6 +125,10 @@ const mockOrder = jest.fn(() => ({
   status: "NEW"
 }));
 const mockOrderTest = jest.fn();
+const mockOrderOco = jest.fn(() => ({
+  orderListId: "1",
+  status: "NEW"
+}));
 
 beforeEach(() => {
   binance.default.mockImplementation(() => ({
@@ -134,6 +138,7 @@ beforeEach(() => {
     exchangeInfo: bnbbtcExchangeInfo,
     order: mockOrder,
     orderTest: mockOrderTest,
+    orderOco: mockOrderOco,
     prices: bnbbtcPrices,
     tradeFee: jest.fn(() => ({
       tradeFee: [
@@ -773,21 +778,13 @@ describe("orders", () => {
           targetPrice: 0.003
         })
       ).resolves.not.toBeDefined();
-      expect(mockOrder).toBeCalledWith({
-        symbol: "BNBBTC",
-        side: "SELL",
-        quantity: "1.00",
-        price: expect.anything(),
-        newOrderRespType: "FULL",
-        stopPrice: "0.0010000",
-        type: "STOP_LOSS_LIMIT"
-      });
-      expect(mockOrder).not.toBeCalledWith({
+      expect(mockOrderOco).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
         quantity: "1.00",
         price: "0.0030000",
-        type: "LIMIT"
+        stopPrice: "0.0010000",
+        stopLimitPrice: expect.anything()
       });
     });
 
@@ -801,14 +798,13 @@ describe("orders", () => {
           scaleOutAmount: 1
         })
       ).resolves.not.toBeDefined();
-      expect(mockOrder).toBeCalledWith({
+      expect(mockOrderOco).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
         quantity: "1.00",
-        price: expect.anything(),
-        newOrderRespType: "FULL",
+        price: "0.0030000",
         stopPrice: "0.0010000",
-        type: "STOP_LOSS_LIMIT"
+        stopLimitPrice: expect.anything()
       });
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
@@ -819,70 +815,6 @@ describe("orders", () => {
         stopPrice: "0.0010000",
         type: "STOP_LOSS_LIMIT"
       });
-      expect(mockOrder).not.toBeCalledWith({
-        symbol: "BNBBTC",
-        side: "SELL",
-        quantity: "1.00",
-        price: "0.0030000",
-        type: "LIMIT"
-      });
-    });
-
-    test("sell order filled via order status", async () => {
-      binance.default.mockImplementation(() => ({
-        avgPrice: bnbbtcAvgPrice,
-        exchangeInfo: bnbbtcExchangeInfo,
-        getOrder: getOrderFilled,
-        order: mockOrder,
-        orderTest: jest.fn(),
-        ws: {
-          trades: jest.fn(),
-          user: jest.fn()
-        }
-      }));
-
-      await expect(
-        binanceOco({
-          pair: "BNBBTC",
-          amount: 1,
-          stopPrice: 0.001,
-          targetPrice: 0.003
-        })
-      ).resolves.not.toBeDefined();
-      expect(mockOrder).toBeCalled();
-      expect(getOrderFilled).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
-    });
-
-    test("one-cancels-the-other order canceled manually", async () => {
-      binance.default.mockImplementation(() => ({
-        avgPrice: bnbbtcAvgPrice,
-        cancelOrder: mockCancel,
-        exchangeInfo: bnbbtcExchangeInfo,
-        order: mockOrder,
-        orderTest: jest.fn(),
-        ws: {
-          trades: jest.fn(),
-          user: jest.fn(cb => {
-            cb({
-              eventType: "executionReport",
-              orderId: "1",
-              commissionAsset: "BNB",
-              orderStatus: "CANCELED"
-            });
-          })
-        }
-      }));
-
-      await expect(
-        binanceOco({
-          pair: "BNBBTC",
-          amount: 1,
-          stopPrice: 0.001,
-          targetPrice: 0.003
-        })
-      ).rejects.toThrow("Order CANCELED");
-      expect(mockOrder).toBeCalled();
-      expect(mockCancel).not.toBeCalled();
     });
   });
 
@@ -1077,7 +1009,7 @@ describe("orders", () => {
       });
     });
 
-    test("buy and one-cancels-the-other order: stop filled", async () => {
+    test("buy and one-cancels-the-other order", async () => {
       await expect(
         binanceOco({
           pair: "BNBBTC",
@@ -1094,25 +1026,17 @@ describe("orders", () => {
         price: "0.0020000",
         type: "LIMIT"
       });
-      expect(mockOrder).toBeCalledWith({
-        symbol: "BNBBTC",
-        side: "SELL",
-        quantity: "1.00",
-        price: expect.anything(),
-        newOrderRespType: "FULL",
-        stopPrice: "0.0010000",
-        type: "STOP_LOSS_LIMIT"
-      });
-      expect(mockOrder).not.toBeCalledWith({
+      expect(mockOrderOco).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
         quantity: "1.00",
         price: "0.0030000",
-        type: "LIMIT"
+        stopPrice: "0.0010000",
+        stopLimitPrice: expect.anything()
       });
     });
 
-    test("buy and one-cancels-the-other order with scale out: stop filled", async () => {
+    test("buy and one-cancels-the-other order with scale out", async () => {
       await expect(
         binanceOco({
           pair: "BNBBTC",
@@ -1130,14 +1054,13 @@ describe("orders", () => {
         price: "0.0020000",
         type: "LIMIT"
       });
-      expect(mockOrder).toBeCalledWith({
+      expect(mockOrderOco).toBeCalledWith({
         symbol: "BNBBTC",
         side: "SELL",
         quantity: "1.00",
-        price: expect.anything(),
-        newOrderRespType: "FULL",
+        price: "0.0030000",
         stopPrice: "0.0010000",
-        type: "STOP_LOSS_LIMIT"
+        stopLimitPrice: expect.anything()
       });
       expect(mockOrder).toBeCalledWith({
         symbol: "BNBBTC",
@@ -1147,122 +1070,6 @@ describe("orders", () => {
         newOrderRespType: "FULL",
         stopPrice: "0.0010000",
         type: "STOP_LOSS_LIMIT"
-      });
-      expect(mockOrder).not.toBeCalledWith({
-        symbol: "BNBBTC",
-        side: "SELL",
-        quantity: "1.00",
-        price: "0.0030000",
-        type: "LIMIT"
-      });
-    });
-
-    describe("one-cancels-the-other orders: target price is hit", () => {
-      beforeEach(() => {
-        binance.default.mockImplementation(() => ({
-          avgPrice: bnbbtcAvgPrice,
-          accountInfo: mockAccountInfo,
-          cancelOrder: mockCancel,
-          exchangeInfo: bnbbtcExchangeInfo,
-          order: mockOrder,
-          orderTest: jest.fn(),
-          prices: bnbbtcPrices,
-          ws: {
-            trades: jest.fn((symbol, cb) => {
-              cb({ symbol, price: "0.003" });
-            }),
-            user: jest.fn(cb => {
-              cb({
-                eventType: "executionReport",
-                orderId: "1",
-                commissionAsset: "BNB",
-                orderStatus: "FILLED"
-              });
-            })
-          }
-        }));
-      });
-
-      test("buy and one-cancels-the-other order: target price hit", async () => {
-        await expect(
-          binanceOco({
-            pair: "BNBBTC",
-            amount: 1,
-            buyPrice: 0.002,
-            stopPrice: 0.001,
-            targetPrice: 0.003
-          })
-        ).resolves.not.toBeDefined();
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "BUY",
-          quantity: "1.00",
-          price: "0.0020000",
-          type: "LIMIT"
-        });
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "SELL",
-          quantity: "1.00",
-          price: expect.anything(),
-          newOrderRespType: "FULL",
-          stopPrice: "0.0010000",
-          type: "STOP_LOSS_LIMIT"
-        });
-        expect(mockCancel).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "SELL",
-          quantity: "1.00",
-          price: "0.0030000",
-          type: "LIMIT"
-        });
-      });
-
-      test("buy and one-cancels-the-other order with scale out: target price hit", async () => {
-        await expect(
-          binanceOco({
-            pair: "BNBBTC",
-            amount: 3,
-            buyPrice: 0.002,
-            stopPrice: 0.001,
-            targetPrice: 0.003,
-            scaleOutAmount: 1
-          })
-        ).resolves.not.toBeDefined();
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "BUY",
-          quantity: "3.00",
-          price: "0.0020000",
-          type: "LIMIT"
-        });
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "SELL",
-          quantity: "1.00",
-          price: expect.anything(),
-          newOrderRespType: "FULL",
-          stopPrice: "0.0010000",
-          type: "STOP_LOSS_LIMIT"
-        });
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "SELL",
-          quantity: "2.00",
-          price: expect.anything(),
-          newOrderRespType: "FULL",
-          stopPrice: "0.0010000",
-          type: "STOP_LOSS_LIMIT"
-        });
-        expect(mockCancel).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
-        expect(mockOrder).toBeCalledWith({
-          symbol: "BNBBTC",
-          side: "SELL",
-          quantity: "1.00",
-          price: "0.0030000",
-          type: "LIMIT"
-        });
       });
     });
   });

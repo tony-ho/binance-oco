@@ -152,6 +152,28 @@ export const binanceOco = async (options: {
     }
   };
 
+  const placeOcoOrderAsync = async (orderAmount: string): Promise<number> => {
+    try {
+      const response = await binance.orderOco({
+        symbol: pair,
+        side: "SELL",
+        quantity: orderAmount,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        price: targetPrice!,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        stopPrice: stopPrice!,
+        stopLimitPrice: stopLimitPrice || stopPrice
+      });
+
+      debug("Sell response: %o", response);
+      debug(`order list id: ${response.orderListId}`);
+
+      return response.orderListId;
+    } catch (err) {
+      throw err;
+    }
+  };
+
   const isOrderFilled = (data: ExecutionReport): boolean => {
     const {
       symbol,
@@ -185,84 +207,6 @@ export const binanceOco = async (options: {
   let disconnect;
   let stopSellAmount: string;
   let targetSellAmount: string;
-
-  const waitForSellOrderFill = (sellOrderId: number): Promise<void> =>
-    new Promise(
-      (resolve, reject): void => {
-        let stopOrderId = sellOrderId;
-        let targetOrderId = 0;
-
-        try {
-          disconnect = binance.ws.trades(
-            pair,
-            async (trade: Trade): Promise<void> => {
-              try {
-                const { symbol, price } = trade;
-                debug(
-                  `${symbol} trade update. price: ${price} stop: ${stopPrice} target: ${targetPrice}`
-                );
-                if (
-                  stopOrderId &&
-                  !targetOrderId &&
-                  targetPrice &&
-                  new BigNumber(price).gte(targetPrice) &&
-                  !isCancelling
-                ) {
-                  await cancelOrderAsync(symbol, stopOrderId);
-                  stopOrderId = 0;
-                  targetOrderId = await placeTargetOrderAsync(targetSellAmount);
-                } else if (
-                  targetOrderId &&
-                  !stopOrderId &&
-                  stopPrice &&
-                  new BigNumber(price).lte(stopPrice) &&
-                  !isCancelling
-                ) {
-                  await cancelOrderAsync(symbol, targetOrderId);
-                  targetOrderId = 0;
-                  stopOrderId = await placeStopOrderAsync(stopSellAmount);
-                }
-              } catch (err) {
-                reject(err);
-              }
-            }
-          );
-
-          binance.ws.user(
-            (msg: Message): void => {
-              try {
-                if (msg.eventType !== "executionReport") return;
-                const executionReport = msg as ExecutionReport;
-                const { orderId } = executionReport;
-                if (orderId === stopOrderId || orderId === targetOrderId) {
-                  if (isOrderFilled(executionReport)) {
-                    resolve();
-                  }
-                }
-              } catch (err) {
-                reject(err);
-              }
-            }
-          );
-
-          binance
-            .getOrder({
-              symbol: pair,
-              orderId: sellOrderId
-            })
-            .then(
-              (response): void => {
-                if (response.status === "FILLED") {
-                  resolve();
-                }
-              }
-            );
-        } catch (err) {
-          reject(err);
-        }
-      }
-    );
-
   let isLimitEntry = false;
   let isStopEntry = false;
 
@@ -570,8 +514,7 @@ export const binanceOco = async (options: {
       stopSellAmount = targetSellAmount;
     }
 
-    const stopOrderId = await placeStopOrderAsync(stopSellAmount);
-    await waitForSellOrderFill(stopOrderId).finally(disconnect);
+    await placeOcoOrderAsync(stopSellAmount);
   } else if (stopPrice && !targetPrice) {
     await placeStopOrderAsync(stopSellAmount);
   } else if (!stopPrice && targetPrice) {
