@@ -451,7 +451,7 @@ export const binanceOco = async (
   }
 
   if (typeof buyPrice !== "undefined" && new BigNumber(buyPrice).gte(0)) {
-    let response: any
+    let response: Order | undefined;
     try {
       if (new BigNumber(buyPrice).isZero()) {
         response = await binance.order({
@@ -495,31 +495,31 @@ export const binanceOco = async (
       debug("Buy response: %o", response);
       debug(`order id: ${response.orderId}`);
 
-      let orderFilled = (response.status == "FILLED");
+      let orderFilled = response.status == "FILLED";
       // Exit hook to safely cancel order
       if (exitHook) {
-        exitHook(async () => {
-          debug("Exit hook fired")
-          var order = response as Order
-          if (order) {
-            if (!orderFilled) {
-              await cancelOrderAsync(pair, order.orderId);
+        exitHook(
+          async (): Promise<void> => {
+            debug("Exit hook fired");
+            var order = response as Order;
+            if (order) {
+              if (!orderFilled) {
+                await cancelOrderAsync(pair, order.orderId);
+              }
             }
           }
-        })
+        );
       }
 
       let commissionAsset = "";
       if (response.status !== "FILLED") {
-        commissionAsset = await waitForBuyOrderFill(response.orderId)
-        .finally(
+        commissionAsset = await waitForBuyOrderFill(response.orderId).finally(
           disconnect
         );
       } else if (response.fills && response.fills.length > 0) {
         commissionAsset = response.fills[0].commissionAsset;
       }
       orderFilled = true;
-
 
       if (stopPrice || targetPrice) {
         await adjustSellAmountsForCommission(commissionAsset, stepSize);
