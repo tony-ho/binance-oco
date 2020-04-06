@@ -1,6 +1,6 @@
 {
   "name": "binance-oco",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on Binance",
   "main": "dist/binance-oco.js",
   "bin": {
