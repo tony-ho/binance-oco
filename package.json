@@ -1,6 +1,6 @@
 {
   "name": "binance-oco",
-  "version": "3.1.1",
+  "version": "0.0.0-development",
   "description": "A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on Binance",
   "main": "dist/binance-oco.js",
   "bin": {
@@ -11,14 +11,15 @@
     "build": "tsc",
     "lint": "eslint src/** --fix",
     "prepare": "npm run build",
-    "test": "jest"
+    "test": "jest",
+    "semantic-release": "semantic-release"
   },
   "files": [
     "dist"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tony-ho/binance-oco.git"
+    "url": "https://github.com/tony-ho/binance-oco.git"
   },
   "author": "Tony Ho",
   "license": "MIT",
@@ -49,6 +50,7 @@
     "jest": "^25.1.0",
     "prettier": "1.17.1",
     "ts-jest": "^25.3.1",
-    "typescript": "^3.4.5"
+    "typescript": "^3.4.5",
+    "semantic-release": "^17.1.1"
   }
 }
