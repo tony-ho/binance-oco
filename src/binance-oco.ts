@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import Binance, {
   AvgPriceResult,
+  ErrorCodes,
   ExecutionReport,
   Message,
   NewOrder,
@@ -282,7 +283,13 @@ export const binanceOco = async (
               }
             );
         } catch (err) {
-          reject(err);
+          if (err.code === ErrorCodes.NO_SUCH_ORDER) {
+            // Order information may not yet be available via Binance REST API.
+            // Ignore and wait for order status update via Websockets executionReport.
+            // See: https://dev.binance.vision/t/faq-error-message-order-does-not-exist/46
+          } else {
+            reject(err);
+          }
         }
       }
     );
