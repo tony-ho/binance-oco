@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
+import { ErrorCodes } from "binance-api-node";
+
 /* eslint-disable @typescript-eslint/no-var-requires */
 jest.mock("binance-api-node");
 
@@ -636,6 +638,75 @@ describe("orders", () => {
       ).resolves.not.toBeDefined();
       expect(mockOrder).toBeCalled();
       expect(getOrderFilled).toBeCalledWith({ symbol: "BNBBTC", orderId: "1" });
+    });
+
+    const getOrderDoesNotExist = jest.fn(() => {
+      const error = new Error("Order does not exist");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (error as any).code = ErrorCodes.NO_SUCH_ORDER;
+      throw error;
+    });
+
+    test("order does not exist error is ignored", async () => {
+      binance.default.mockImplementation(() => ({
+        avgPrice: bnbbtcAvgPrice,
+        accountInfo: mockAccountInfo,
+        exchangeInfo: bnbbtcExchangeInfo,
+        order: mockOrder,
+        orderTest: jest.fn(),
+        getOrder: getOrderDoesNotExist,
+        prices: bnbbtcPrices,
+        ws: {
+          trades: jest.fn(),
+          user: jest.fn(cb => {
+            cb({
+              eventType: "executionReport",
+              orderId: "1",
+              commissionAsset: "BNB",
+              orderStatus: "FILLED"
+            });
+          })
+        }
+      }));
+
+      await expect(
+        binanceOco({
+          pair: "BNBBTC",
+          amount: 1,
+          buyPrice: 0.002
+        })
+      ).resolves.not.toThrow();
+    });
+
+    const getOrderFilledError = jest.fn(() => {
+      const error = new Error("Anything other than order does not exist");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (error as any).code = ErrorCodes.UNKNOWN;
+      throw error;
+    });
+
+    test("get order status throws error", async () => {
+      binance.default.mockImplementation(() => ({
+        avgPrice: bnbbtcAvgPrice,
+        accountInfo: mockAccountInfo,
+        exchangeInfo: bnbbtcExchangeInfo,
+        order: mockOrder,
+        orderTest: jest.fn(),
+        getOrder: getOrderFilledError,
+        prices: bnbbtcPrices,
+        ws: {
+          trades: jest.fn(),
+          user: jest.fn()
+        }
+      }));
+
+      await expect(
+        binanceOco({
+          pair: "BNBBTC",
+          amount: 1,
+          buyPrice: 0.002
+        })
+      ).rejects.toThrow();
     });
 
     test("buy order with cancel price", async () => {
