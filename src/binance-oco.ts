@@ -217,7 +217,7 @@ export const binanceOco = async (
 
   const waitForBuyOrderFill = (buyOrderId: number): Promise<string> => {
     return new Promise(
-      (resolve, reject): void => {
+      async (resolve, reject): Promise<void> => {
         try {
           disconnect = binance.ws.trades(
             pair,
@@ -269,19 +269,14 @@ export const binanceOco = async (
             }
           );
 
-          binance
-            .getOrder({
-              symbol: pair,
-              orderId: buyOrderId
-            })
-            .then(
-              (response): void => {
-                if (response.status === "FILLED") {
-                  // Binance API doesn't provide commission asset information; default to BNB
-                  resolve("BNB");
-                }
-              }
-            );
+          const response = await binance.getOrder({
+            symbol: pair,
+            orderId: buyOrderId
+          });
+          if (response.status === "FILLED") {
+            // Binance API doesn't provide commission asset information; default to BNB
+            resolve("BNB");
+          }
         } catch (err) {
           if (err.code === ErrorCodes.NO_SUCH_ORDER) {
             // Order information may not yet be available via Binance REST API.
