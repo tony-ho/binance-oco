@@ -1,6 +1,10 @@
+⚠️ **binance-oco has been deprecated** ⚠️
+
+`binance-oco` is no longer actively maintained as it has been obseleted by the availability of OCO (One-Cancels-the-Other) orders, margin trading, and futures trading on Binance.
+
 # Binance Auto Stop & Target OCO (One-Cancels-the-Other)
 
-A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on [Binance](https://www.binance.com/?ref=17067303) cryptocurrency exchange.
+A command line tool for placing conditional stop-limit, limit, and OCO (One-Cancels-the-Other) sell orders on [Binance](https://www.binance.com/) cryptocurrency exchange.
 
 ## Installation
 
